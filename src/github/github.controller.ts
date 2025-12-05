@@ -27,4 +27,9 @@ export class GithubController {
   async getBuilderMemory() {
     return this.github.getBuilderMemory();
   }
+
+  @Get('os-memory')
+  async getOSMemory() {
+    return this.github.getOSMemory();
+  }
 }

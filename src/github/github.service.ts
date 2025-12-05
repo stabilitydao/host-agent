@@ -1,11 +1,15 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { daos } from '@stabilitydao/stability';
+import { IBuildersMemory } from '@stabilitydao/stability/out/activity/builder';
 import * as os from '@stabilitydao/stability/out/os';
 import * as dotenv from 'dotenv';
 import * as fs from 'fs';
 import { App, Octokit } from 'octokit';
 import { FullIssue, Issues } from './types/issue';
+import { RevenueService } from 'src/revenue/revenue.service';
+import { OnChainDataService } from 'src/on-chain-data/on-chain-data.service';
 
 dotenv.config();
 
@@ -17,11 +21,18 @@ export class GithubService implements OnModuleInit {
   private message: string;
   private logger = new Logger(GithubService.name);
   private installationId: number;
+  private os: os.OS;
 
   private handleIssueIsRunning = false;
   private fullSyncIsRunning = false;
 
-  constructor(private config: ConfigService) {}
+  constructor(
+    private config: ConfigService,
+    private readonly revenueService: RevenueService,
+    private readonly onChainDataService: OnChainDataService,
+  ) {
+    this.os = new os.OS(daos);
+  }
 
   async onModuleInit() {
     const appId = this.config.getOrThrow<string>('APP_ID');
@@ -150,37 +161,8 @@ export class GithubService implements OnModuleInit {
     }
   }
 
-  private async updateIssues() {
-    const daos = os.daos;
-
-    for (const dao of daos) {
-      const builder = dao.builderActivity;
-      if (!builder) continue;
-
-      const repos = builder.repo ?? [];
-      const octokit = await this.getOctokit();
-
-      for (const repo of repos) {
-        const [owner, repoName] = repo.split('/');
-        this.logger.log(`Fetching issues for ${repo}...`);
-
-        try {
-          const { data: issues } = await octokit.rest.issues.listForRepo({
-            owner,
-            repo: repoName,
-            per_page: 100,
-          });
-
-          this.issues[repo] = issues.map((i) => this.issueToDTO(i, repo));
-        } catch (e) {
-          this.logger.error(`Failed to fetch issues for ${repo}`);
-        }
-      }
-    }
-  }
-
   async syncLabels() {
-    const daos = os.daos;
+    const daos = this.os.daos;
     for (const dao of daos) {
       const builder = dao.builderActivity;
       if (!builder) {
@@ -245,12 +227,20 @@ export class GithubService implements OnModuleInit {
     }
   }
 
-  getBuilderMemory() {
-    const daos = os.daos;
+  getOSMemory(): os.IOSMemory {
+    const buildersMemory = this.getBuilderMemory();
+    return {
+      builders: buildersMemory,
+      daos: this.getDaosFullData(),
+    };
+  }
+
+  getBuilderMemory(): IBuildersMemory {
+    const daos = this.os.daos;
     const poolsMemory: any = {};
 
     for (const dao of daos) {
-      poolsMemory[dao.tokenization.tokenSymbol] = {
+      poolsMemory[dao.symbol] = {
         conveyors: {},
         openIssues: { pools: {}, total: {} },
       };
@@ -258,22 +248,19 @@ export class GithubService implements OnModuleInit {
       const agent = dao.builderActivity;
 
       for (const repo of Object.keys(this.issues)) {
-        poolsMemory[dao.tokenization.tokenSymbol].openIssues.total[repo] =
+        poolsMemory[dao.symbol].openIssues.total[repo] =
           this.issues[repo].length;
       }
 
       for (const pool of agent?.pools ?? []) {
-        poolsMemory[dao.tokenization.tokenSymbol].openIssues.pools[pool.name] =
-          [];
+        poolsMemory[dao.symbol].openIssues.pools[pool.name] = [];
 
         const issues = Object.values(this.issues).flat();
         const filtered = issues.filter((issue) =>
           issue.labels.some((l) => l.name === pool.label.name),
         );
 
-        poolsMemory[dao.tokenization.tokenSymbol].openIssues.pools[
-          pool.name
-        ].push(...filtered);
+        poolsMemory[dao.symbol].openIssues.pools[pool.name].push(...filtered);
       }
 
       const conveyorsMemory: any = {};
@@ -310,10 +297,51 @@ export class GithubService implements OnModuleInit {
         }
       }
 
-      poolsMemory[dao.tokenization.tokenSymbol].conveyors = conveyorsMemory;
+      poolsMemory[dao.symbol].conveyors = conveyorsMemory;
     }
 
     return poolsMemory;
+  }
+
+  private getDaosFullData(): os.IOSMemory['daos'] {
+    const result: os.IOSMemory['daos'] = {};
+    for (const dao of this.os.daos) {
+      result[dao.symbol] = {
+        oraclePrice: '0',
+        coingeckoPrice: '0',
+        revenueChart: this.revenueService.getRevenueChart(dao.symbol),
+        onChainData: this.onChainDataService.getOnChainData(dao.symbol),
+      };
+    }
+    return result;
+  }
+  private async updateIssues() {
+    const daos = this.os.daos;
+
+    for (const dao of daos) {
+      const builder = dao.builderActivity;
+      if (!builder) continue;
+
+      const repos = builder.repo ?? [];
+      const octokit = await this.getOctokit();
+
+      for (const repo of repos) {
+        const [owner, repoName] = repo.split('/');
+        this.logger.log(`Fetching issues for ${repo}...`);
+
+        try {
+          const { data: issues } = await octokit.rest.issues.listForRepo({
+            owner,
+            repo: repoName,
+            per_page: 100,
+          });
+
+          this.issues[repo] = issues.map((i) => this.issueToDTO(i, repo));
+        } catch (e) {
+          this.logger.error(`Failed to fetch issues for ${repo}`);
+        }
+      }
+    }
   }
 
   private extractIssueStep(title: string): string {

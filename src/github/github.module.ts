@@ -2,10 +2,13 @@ import { Module } from '@nestjs/common';
 import { GithubController } from './github.controller';
 import { GithubService } from './github.service';
 import { GithubCommand } from './github.command';
-import { CommandService } from 'nestjs-command';
+import { DaoModule } from 'src/dao/dao.module';
+import { RevenueModule } from 'src/revenue/revenue.module';
+import { OnChainDataModule } from 'src/on-chain-data/on-chain-data.module';
 
 @Module({
   controllers: [GithubController],
+  imports: [DaoModule, RevenueModule, OnChainDataModule],
   providers: [GithubService, GithubCommand],
 })
 export class GithubModule {}
