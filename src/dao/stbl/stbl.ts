@@ -194,12 +194,12 @@ export class STBlDao extends DaoService {
       switch (unit.unitId) {
         case 'xstbl':
           result[unit.unitId] = {
-            pendingRevenue: await this.getPendingRevenue(publicClient),
+            pendingRevenue: await this.getPendingRebase(publicClient),
           };
           break;
         case 'stability:stabilityFarm':
           result[unit.unitId] = {
-            pendingRevenue: await this.getPendingRebase(publicClient),
+            pendingRevenue: await this.getPendingRevenue(publicClient),
           };
           break;
         case 'stability:stabilityMarket':
