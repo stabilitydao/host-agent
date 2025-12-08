@@ -1,22 +1,27 @@
 import { Injectable } from '@nestjs/common';
-import { deployments } from '@stabilitydao/stability';
-import { Chain, createPublicClient, http, PublicClient } from 'viem';
-import * as allChains from 'viem/chains';
+import { ChainsService } from 'src/chains/chains.service';
+import { createPublicClient, http, PublicClient } from 'viem';
 
 @Injectable()
 export class RpcService {
   private publicClientsMap: Map<string, PublicClient> = new Map();
-  constructor() {
-    for (const chainId in deployments) {
-      const chain = this.findChainById(chainId);
+  constructor(private readonly chains: ChainsService) {
+    for (const chainId of this.chains.getChainIds()) {
+      const chain = this.chains.getChainById(chainId);
       if (!chain) {
         continue;
       }
 
-      const rpcUrl = chain.rpcUrls.default.http[0];
+      const viemChain = this.chains.getViemChainById(chainId);
+
+      if (!viemChain) {
+        continue;
+      }
+
+      const rpcUrl = viemChain.rpcUrls.default[0];
 
       const client = createPublicClient({
-        chain,
+        chain: viemChain,
         transport: http(rpcUrl),
       });
 
@@ -26,11 +31,5 @@ export class RpcService {
 
   getClient(chainId: string) {
     return this.publicClientsMap.get(chainId);
-  }
-
-  private findChainById(chainId: string): Chain | undefined {
-    return Object.values(allChains).find((c: any) => c?.id == chainId) as
-      | Chain
-      | undefined;
   }
 }

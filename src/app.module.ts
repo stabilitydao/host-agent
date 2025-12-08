@@ -9,6 +9,8 @@ import { HttpModule } from '@nestjs/axios';
 import { RevenueModule } from './revenue/revenue.module';
 import { RpcModule } from './rpc/rpc.module';
 import { OnChainDataModule } from './on-chain-data/on-chain-data.module';
+import { AnalyticsModule } from './analytics/analytics.module';
+import { ChainsModule } from './chains/chains.module';
 
 @Module({
   imports: [
@@ -18,10 +20,12 @@ import { OnChainDataModule } from './on-chain-data/on-chain-data.module';
     GithubModule,
     CommandModule,
     SubgraphModule,
+    ChainsModule,
     DaoModule,
     RevenueModule,
     RpcModule,
     OnChainDataModule,
+    AnalyticsModule,
   ],
   controllers: [],
   providers: [],

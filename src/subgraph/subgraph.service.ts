@@ -2,13 +2,17 @@ import { HttpService } from '@nestjs/axios';
 import { Injectable } from '@nestjs/common';
 import { deployments } from '@stabilitydao/stability';
 import { firstValueFrom } from 'rxjs';
+import { ChainsService } from 'src/chains/chains.service';
 
 @Injectable()
 export class SubgraphService {
   private subgraphMap = new Map();
-  constructor(private readonly httpService: HttpService) {
-    for (const chainId in deployments) {
-      if (deployments[chainId].subgraph) {
+  constructor(
+    private readonly httpService: HttpService,
+    private readonly chainsService: ChainsService,
+  ) {
+    for (const chainId of this.chainsService.getChainIds()) {
+      if (deployments[chainId]?.subgraph) {
         this.subgraphMap.set(chainId, deployments[chainId].subgraph);
       }
     }

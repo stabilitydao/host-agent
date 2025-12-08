@@ -12,7 +12,9 @@ import RevenueRouterABI from 'abi/RevenueRouterABI';
 import { now } from 'src/utils/now';
 import XSTBLAbi from 'abi/XSTBLABI';
 import { sleep } from 'src/utils/sleep';
+import { Injectable } from '@nestjs/common';
 
+@Injectable()
 export class STBlDao extends DaoService {
   public static symbol = 'STBL';
   private isLive: boolean;
@@ -281,7 +283,7 @@ export class STBlDao extends DaoService {
     }) as Promise<bigint>;
   }
 
-  private getChains(): string[] {
+  private getChains() {
     return Object.keys(this.dao.deployments);
   }
 }

@@ -20,6 +20,8 @@ async function bootstrap() {
 
   const app = await NestFactory.create(AppModule, options);
 
+  app.setGlobalPrefix('api');
+
   app.enableCors({
     origin: [
       'https://stability.farm',
