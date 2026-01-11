@@ -1408,10 +1408,10 @@
   dependencies:
     "@sinonjs/commons" "^3.0.0"
 
-"@stabilitydao/stability@=0.54.0":
-  version "0.54.0"
-  resolved "https://registry.yarnpkg.com/@stabilitydao/stability/-/stability-0.54.0.tgz#fa6e61c0a7c57a266991064d0ae3b65493fa5d43"
-  integrity sha512-nyJRY9GqVdjRMiPEuMaszVg97FcnFNokt6A7ahRT9rPS1ELbvpaJ756zBdKODAG/N9MEIie/fzz9BvczXsqc5A==
+"@stabilitydao/stability@=0.59.1":
+  version "0.59.1"
+  resolved "https://registry.yarnpkg.com/@stabilitydao/stability/-/stability-0.59.1.tgz#199a32dff997cfb69a8c75e1aeec6e9a58dbeea3"
+  integrity sha512-nmfMpUZBhix8ixyCxCkXpJavzg9AW/q7TuCVGyevZuMkFgu2D9BGmopfVFsoEFeldJPAWHC7Zfgjeg3EKZ+j+w==
 
 "@swc/cli@^0.6.0":
   version "0.6.0"

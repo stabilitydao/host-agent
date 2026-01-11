@@ -1,7 +1,6 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { daos } from '@stabilitydao/stability';
 import { IBuildersMemory } from '@stabilitydao/stability/out/activity/builder';
 import * as os from '@stabilitydao/stability/out/os';
 import * as dotenv from 'dotenv';
@@ -10,6 +9,7 @@ import { App, Octokit } from 'octokit';
 import { FullIssue, Issues } from './types/issue';
 import { RevenueService } from 'src/revenue/revenue.service';
 import { OnChainDataService } from 'src/on-chain-data/on-chain-data.service';
+import { AnalyticsService } from 'src/analytics/analytics.service';
 
 dotenv.config();
 
@@ -30,8 +30,9 @@ export class GithubService implements OnModuleInit {
     private config: ConfigService,
     private readonly revenueService: RevenueService,
     private readonly onChainDataService: OnChainDataService,
+    private readonly analyticsService: AnalyticsService,
   ) {
-    this.os = new os.OS(daos);
+    this.os = new os.OS('0');
   }
 
   async onModuleInit() {
@@ -163,7 +164,8 @@ export class GithubService implements OnModuleInit {
 
   async syncLabels() {
     const daos = this.os.daos;
-    for (const dao of daos) {
+    for (const daoKey in daos) {
+      const dao = daos[daoKey];
       const builder = dao.builderActivity;
       if (!builder) {
         this.logger.error('Builder agent not found');
@@ -229,9 +231,12 @@ export class GithubService implements OnModuleInit {
 
   getOSMemory(): os.IOSMemory {
     const buildersMemory = this.getBuilderMemory();
+    const analytics = this.analyticsService.getAnalytics();
     return {
       builders: buildersMemory,
       daos: this.getDaosFullData(),
+      chainTvl: analytics.chainTvls,
+      prices: {},
     };
   }
 
@@ -239,7 +244,8 @@ export class GithubService implements OnModuleInit {
     const daos = this.os.daos;
     const poolsMemory: any = {};
 
-    for (const dao of daos) {
+    for (const daoKey in daos) {
+      const dao = daos[daoKey];
       poolsMemory[dao.symbol] = {
         conveyors: {},
         openIssues: { pools: {}, total: {} },
@@ -305,7 +311,8 @@ export class GithubService implements OnModuleInit {
 
   private getDaosFullData(): os.IOSMemory['daos'] {
     const result: os.IOSMemory['daos'] = {};
-    for (const dao of this.os.daos) {
+    for (const daoKey in this.os.daos) {
+      const dao = this.os.daos[daoKey];
       result[dao.symbol] = {
         oraclePrice: '0',
         coingeckoPrice: '0',
@@ -318,7 +325,8 @@ export class GithubService implements OnModuleInit {
   private async updateIssues() {
     const daos = this.os.daos;
 
-    for (const dao of daos) {
+    for (const daoKey in daos) {
+      const dao = daos[daoKey];
       const builder = dao.builderActivity;
       if (!builder) continue;
 
