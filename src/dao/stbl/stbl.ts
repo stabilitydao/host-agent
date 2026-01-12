@@ -11,7 +11,6 @@ import { Abi, Address, PublicClient } from 'viem';
 import RevenueRouterABI from 'abi/RevenueRouterABI';
 import { now } from 'src/utils/now';
 import XSTBLAbi from 'abi/XSTBLABI';
-import { sleep } from 'src/utils/sleep';
 import { Injectable } from '@nestjs/common';
 
 @Injectable()
@@ -136,7 +135,6 @@ export class STBlDao extends DaoService {
   private async getOnChainDataForChain(
     chainId: string,
   ): Promise<OnChainData[string]> {
-    await sleep(3);
     const publicClient = this.rpcProvider.getClient(chainId);
 
     if (!publicClient)
