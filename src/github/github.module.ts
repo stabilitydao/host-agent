@@ -11,5 +11,6 @@ import { AnalyticsModule } from 'src/analytics/analytics.module';
   controllers: [GithubController],
   imports: [DaoModule, RevenueModule, OnChainDataModule, AnalyticsModule],
   providers: [GithubService, GithubCommand],
+  exports: [GithubService],
 })
 export class GithubModule {}

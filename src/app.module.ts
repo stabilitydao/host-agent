@@ -11,6 +11,7 @@ import { RpcModule } from './rpc/rpc.module';
 import { OnChainDataModule } from './on-chain-data/on-chain-data.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { ChainsModule } from './chains/chains.module';
+import { MemoryModule } from './memory/memory.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { ChainsModule } from './chains/chains.module';
     RpcModule,
     OnChainDataModule,
     AnalyticsModule,
+    MemoryModule,
   ],
   controllers: [],
   providers: [],
