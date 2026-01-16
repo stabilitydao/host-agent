@@ -1,4 +1,6 @@
+import { IOSMemory } from '@stabilitydao/stability/out/os';
+
 export type Analytics = {
-  chainTvls: { [chainId: string]: number };
-  prices: { [symbol: string]: number };
+  chainTvls: IOSMemory['chainTvl'];
+  prices: IOSMemory['prices'];
 };
