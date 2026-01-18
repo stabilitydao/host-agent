@@ -24,14 +24,15 @@ async function bootstrap() {
 
   app.enableCors({
     origin: [
-      'https://stability.farm',
-      'https://stabilitydao.org',
-      'https://alpha.stabilitydao.org',
-      'https://beta.stability.farm',
-      'https://stability.market',
-      'https://dao.host',
-      'http://localhost:4321',
-      'http://localhost:3000',
+      '*',
+      // 'https://stability.farm',
+      // 'https://stabilitydao.org',
+      // 'https://alpha.stabilitydao.org',
+      // 'https://beta.stability.farm',
+      // 'https://stability.market',
+      // 'https://dao.host',
+      // 'http://localhost:4321',
+      // 'http://localhost:3000',
     ],
   });
   await app.listen(process.env.PORT ?? 3000);
