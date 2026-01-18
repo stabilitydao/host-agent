@@ -34,6 +34,13 @@ async function bootstrap() {
   //     'http://localhost:3000',
   //   ],
   // });
+
+  app.enableCors({
+    origin: true,
+    credentials: true,
+    methods: '*',
+    allowedHeaders: '*',
+  });
   await app.listen(process.env.PORT ?? 3000);
 }
 bootstrap();
