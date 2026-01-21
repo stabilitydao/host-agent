@@ -1408,10 +1408,10 @@
   dependencies:
     "@sinonjs/commons" "^3.0.0"
 
-"@stabilitydao/host@^0.2.2":
-  version "0.2.2"
-  resolved "https://registry.yarnpkg.com/@stabilitydao/host/-/host-0.2.2.tgz#652af1065a22fcac9fe60b6a2caa94e730b59cca"
-  integrity sha512-AIw0SBB61CMic/3F6fqCSXIkQrlgUGwZM5yr5RbQgUUz/194hcb/SkW08KawYhQ5MnTEHD1rRZ3Q5xNcuq1hBQ==
+"@stabilitydao/host@^0.3.0":
+  version "0.3.2"
+  resolved "https://registry.yarnpkg.com/@stabilitydao/host/-/host-0.3.2.tgz#69095ae4b3827332c1316d7c77a83a622b5e36c8"
+  integrity sha512-lrX4HJUoOhBHouJdJ8QpfYyMIQ1SLIiA5ExrS0jDFirTi1o+XNmDjqWiOxC8TVFdNfi2GoH0l+sDfh9SQp0EXg==
 
 "@stabilitydao/stability@=0.59.1":
   version "0.59.1"
@@ -5837,6 +5837,11 @@ util-deprecate@^1.0.1:
   version "1.0.2"
   resolved "https://registry.yarnpkg.com/util-deprecate/-/util-deprecate-1.0.2.tgz#450d4dc9fa70de732762fbd2d4a28981419a0ccf"
   integrity sha512-EPD5q1uXyFxJpCrLnCc1nHnq3gOa6DZBocAIiI2TaSCA7VCJ1UJDMagCzIkXNsUYfD1daK//LTEQ8xiIbrHtcw==
+
+uuid@^13.0.0:
+  version "13.0.0"
+  resolved "https://registry.yarnpkg.com/uuid/-/uuid-13.0.0.tgz#263dc341b19b4d755eb8fe36b78d95a6b65707e8"
+  integrity sha512-XQegIaBTVUjSHliKqcnFqYypAd4S+WCYt5NIeRs6w/UAry7z8Y9j5ZwRRL4kzq9U3sD6v+85er9FvkEaBpji2w==
 
 v8-compile-cache-lib@^3.0.1:
   version "3.0.1"

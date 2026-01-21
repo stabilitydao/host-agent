@@ -23,6 +23,6 @@ export class DexscreenerService {
 
     const { priceUsd, priceChange } = response.data.pair;
 
-    return { priceUsd, priceChange: priceChange?.h24 };
+    return { price: priceUsd, priceChange: priceChange?.h24 };
   }
 }

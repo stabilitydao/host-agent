@@ -136,7 +136,7 @@ export class STBlDao extends DaoService {
   private async getOnChainDataForChain(
     chainId: string,
   ): Promise<OnChainData[string]> {
-    const publicClient = this.rpcProvider.getClient(chainId);
+    const publicClient = this.rpcProvider.getPublicClient(chainId);
 
     if (!publicClient)
       throw new Error(
