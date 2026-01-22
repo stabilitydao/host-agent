@@ -9,6 +9,7 @@ import {
 } from 'viem';
 import { TxQueue } from './tx-sender.queu';
 import { SentTransactionResult, Transaction } from './tx-sender.types';
+import { v4 } from 'uuid';
 
 @Injectable()
 export class TxSenderService {
@@ -25,6 +26,10 @@ export class TxSenderService {
   addTxToQueue(tx: Transaction) {
     this.logger.log(`[${tx.chainId}] Adding tx to queue ${tx.type}-${tx.id}`);
     this.queue.add(tx);
+  }
+
+  generateTxId() {
+    return v4();
   }
 
   private async processQueue() {
@@ -90,7 +95,7 @@ export class TxSenderService {
   ): Promise<WriteContractParameters | null> {
     this.logger.log(`[${tx.chainId}] Simulating tx ${tx.type}-${tx.id}`);
     try {
-      const sim = await client.simulateContract(tx.data);
+      const sim = await client.simulateContract({ ...tx.data });
       this.logger.log(
         `[${tx.chainId}] Simulated tx successfully ${tx.type}-${tx.id}`,
       );

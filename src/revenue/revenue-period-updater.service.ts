@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Cron, CronExpression } from '@nestjs/schedule';
+import { Cron } from '@nestjs/schedule';
 import { daos } from '@stabilitydao/host';
 import { ContractIndices, IDAOData } from '@stabilitydao/host/out/host';
 import RevenueRouterABI from 'abi/RevenueRouterABI';
@@ -8,12 +8,14 @@ import { TransactionType } from 'src/tx-sender/tx-sender.types';
 import { v4 } from 'uuid';
 import { Abi } from 'viem';
 
+const CRON_EXPRESSION = '0 0 * * 4';
+
 @Injectable()
 export class RevenuePeriodUpdaterService {
   private updatePeriodFunctionName = 'updatePeriod';
   constructor(private readonly txSenderService: TxSenderService) {}
 
-  @Cron(CronExpression.EVERY_MINUTE)
+  @Cron(CRON_EXPRESSION, { timeZone: 'UTC' })
   async handleCron() {
     await this.updatePeriods();
   }

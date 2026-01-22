@@ -14,10 +14,12 @@ import { ChainsModule } from './chains/chains.module';
 import { MemoryModule } from './memory/memory.module';
 import { TxSenderModule } from './tx-sender/tx-sender.module';
 import { TokenHoldersModule } from './token-holders/token-holders.module';
+import { DaoPowerModule } from './dao-power/dao-power.module';
+import { config } from './config/config';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({ isGlobal: true, load: [config] }),
     ScheduleModule.forRoot(),
     HttpModule,
     GithubModule,
@@ -32,6 +34,7 @@ import { TokenHoldersModule } from './token-holders/token-holders.module';
     MemoryModule,
     TxSenderModule,
     TokenHoldersModule,
+    DaoPowerModule,
   ],
   controllers: [],
   providers: [],

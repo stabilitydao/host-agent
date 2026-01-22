@@ -49,7 +49,7 @@ export class RpcService {
     if (!chain) {
       return undefined;
     }
-    return chain.rpcUrls.default[0];
+    return chain.rpcUrls.default.http[0];
   }
 
   private setPublicClient(chain: Chain) {

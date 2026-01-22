@@ -1,11 +1,14 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { daos, IDAOData } from '@stabilitydao/host';
 import { ContractIndices } from '@stabilitydao/host/out/host';
 import { execSync } from 'child_process';
-import fs from 'fs';
-import path from 'path';
+import * as fs from 'fs';
+import * as path from 'path';
 import { RpcService } from 'src/rpc/rpc.service';
 import { Abi, formatUnits, getAddress } from 'viem';
+import { TokenHolder } from './types';
+import { ConfigService } from '@nestjs/config';
 
 interface TransferLog {
   address: `0x${string}`;
@@ -18,6 +21,7 @@ export class TokenHoldersService {
   private readonly step = 200_000;
 
   private readonly tempDir = './temp/token-holders';
+  private readonly enabled: boolean;
 
   private readonly erc20ABI = [
     {
@@ -36,12 +40,40 @@ export class TokenHoldersService {
     },
   ];
 
-  constructor(private readonly rpcService: RpcService) {}
+  constructor(
+    private readonly rpcService: RpcService,
+    private readonly configService: ConfigService,
+  ) {
+    this.enabled =
+      Boolean(this.configService.get('tokenHoldersParsingEnabled')) ?? false;
+  }
+
+  @Cron(CronExpression.EVERY_MINUTE)
+  async handleCron() {
+    if (!this.enabled) return;
+    await this.updateTokenHolders();
+  }
 
   async updateTokenHolders() {
     for (const dao of daos) {
       await this.updateTokenHoldersForDao(dao);
     }
+  }
+
+  getTokenHoldersForDao(daoKey: string): Record<string, TokenHolder[]> {
+    const holders = {};
+    const dao = daos.find((dao) => dao.symbol === daoKey);
+    if (!dao) return holders;
+    const folder = path.join(this.tempDir, `${daoKey}`);
+    for (const chainId in dao.deployments) {
+      const chainFolder = path.join(folder, chainId);
+      const filename = path.join(chainFolder, 'holders.json');
+
+      const data = fs.readFileSync(filename, 'utf-8');
+      const json = JSON.parse(data);
+      holders[chainId] = json;
+    }
+    return holders;
   }
 
   private async updateTokenHoldersForDao(dao: IDAOData) {
@@ -72,6 +104,10 @@ export class TokenHoldersService {
     chainId: string;
     tokenAddress: `0x${string}`;
   }) {
+    this.logger.log(
+      `[${opts.chainId}] Updating token holders for token=${opts.tokenAddress}`,
+    );
+
     const { daoKey, chainId, tokenAddress } = opts;
 
     const client = this.rpcService.getPublicClient(chainId);
@@ -89,7 +125,7 @@ export class TokenHoldersService {
     }
 
     const tempDir = this.tempDir;
-    const baseDir = path.join(tempDir, daoKey, chainId, tokenAddress);
+    const baseDir = path.join(tempDir, daoKey, chainId);
 
     fs.mkdirSync(baseDir, { recursive: true });
 
