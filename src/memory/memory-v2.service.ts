@@ -1,38 +1,52 @@
 import { Injectable } from '@nestjs/common';
-import { daos } from '@stabilitydao/host/out';
-import { IBuildersMemory } from '@stabilitydao/host/out/activity/builder';
-import { IOSMemory } from '@stabilitydao/host/out/api';
-import { IDAOData } from '@stabilitydao/host/out/host';
-import { AnalyticsService } from '../analytics/analytics.service';
-import { GithubService } from '../github/github.service';
-import { OnChainDataService } from '../on-chain-data/on-chain-data.service';
-import { RevenueService } from '../revenue/revenue.service';
+import { IDAOData, IHostAgentMemory, daos } from '@stabilitydao/host';
+import { IBuildersMemoryV2 } from '@stabilitydao/host/out/activity/builder';
+import { AnalyticsService } from 'src/analytics/analytics.service';
+import { GithubService } from 'src/github/github.service';
+import { OnChainDataService } from 'src/on-chain-data/on-chain-data.service';
+import { RevenueService } from 'src/revenue/revenue.service';
+import { TxMonitoringService } from 'src/tx-sender/tx-monitoring.service';
+import { now } from 'src/utils/now';
 
 @Injectable()
-export class MemoryService {
+export class MemoryV2Service {
   private daos: IDAOData[] = [];
+
+  private startTs: number;
   constructor(
     private readonly githubService: GithubService,
     private readonly analyticsService: AnalyticsService,
     private readonly revenueService: RevenueService,
     private readonly onChainDataService: OnChainDataService,
+    private readonly txMonitoring: TxMonitoringService,
   ) {
     this.daos = daos;
   }
 
-  getOSMemory(): IOSMemory {
-    const buildersMemory = this.getBuilderMemory();
+  onApplicationBootstrap() {
+    this.startTs = now();
+  }
+
+  getHostAgentMemory(): IHostAgentMemory {
     const analytics = this.analyticsService.getAnalytics();
+    const buildersMemory = this.getBuilderMemoryV2();
     return {
-      builders: buildersMemory,
-      daos: this.getDaosFullData(),
-      chainTvl: analytics.chainTvls,
-      prices: analytics.prices,
+      data: {
+        chainTvl: analytics.chainTvls,
+        builders: buildersMemory,
+        daos: this.getDaosFullData(),
+        prices: analytics.prices,
+      },
+      overview: {},
+      private: false,
+      started: this.startTs,
+      timestamp: now(),
+      txSender: this.txMonitoring.spendingReport,
     };
   }
 
-  getBuilderMemory(): IBuildersMemory {
-    const poolsMemory: IBuildersMemory = {};
+  private getBuilderMemoryV2(): IBuildersMemoryV2 {
+    const poolsMemory: IBuildersMemoryV2 = {};
 
     for (const dao of this.daos) {
       poolsMemory[dao.symbol] = {
@@ -45,7 +59,7 @@ export class MemoryService {
       const repos = this.githubService.getRepos();
 
       for (const repo of repos) {
-        const issues = this.githubService.getIssuesByRepo(repo);
+        const issues = this.githubService.getIssuesByRepoV2(repo);
 
         poolsMemory[dao.symbol].openIssues.total[repo] = issues.length;
       }
@@ -53,7 +67,7 @@ export class MemoryService {
       for (const pool of agent?.pools ?? []) {
         poolsMemory[dao.symbol].openIssues.pools[pool.name] = [];
 
-        const issues = this.githubService.getIssues();
+        const issues = this.githubService.getIssuesV2();
 
         const filtered = issues.filter((issue) =>
           issue.labels.some((l) => l.name === pool.label.name),
@@ -102,12 +116,13 @@ export class MemoryService {
     return poolsMemory;
   }
 
-  private getDaosFullData(): IOSMemory['daos'] {
-    const result: IOSMemory['daos'] = {};
+  private getDaosFullData(): IHostAgentMemory['data']['daos'] {
+    const result: IHostAgentMemory['data']['daos'] = {};
     for (const dao of this.daos) {
       result[dao.symbol] = {
         oraclePrice: '0',
         coingeckoPrice: '0',
+        socialUsers: {},
         revenueChart: this.revenueService.getRevenueChart(dao.symbol),
         onChainData: this.onChainDataService.getOnChainData(dao.symbol),
       };

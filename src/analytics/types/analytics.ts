@@ -1,4 +1,4 @@
-import { IOSMemory } from '@stabilitydao/stability/out/os';
+import { IOSMemory } from "@stabilitydao/host/out/api";
 
 export type Analytics = {
   chainTvls: IOSMemory['chainTvl'];

@@ -1,13 +1,14 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { daoMetaData, daos } from '@stabilitydao/host/out';
+import { daoMetaData, daos, IGithubIssue } from '@stabilitydao/host/out';
 import { IDAOData } from '@stabilitydao/host/out/host';
 import * as dotenv from 'dotenv';
 import * as fs from 'fs';
 import { App, Octokit } from 'octokit';
 import { sleep } from '../utils/sleep';
 import { FullIssue, Issues } from './types/issue';
+import { IGithubIssueV2 } from '@stabilitydao/host/out/activity/builder';
 dotenv.config();
 
 @Injectable()
@@ -181,11 +182,36 @@ export class GithubService implements OnModuleInit {
     return Object.keys(this.issues);
   }
 
-  getIssues() {
-    return Object.values(this.issues).flat();
+  getIssues(): IGithubIssue[] {
+    return Object.values(this.issues)
+      .flat()
+      .map((i) => ({
+        ...i,
+        assignees: i.assignee,
+      }));
   }
-  getIssuesByRepo(repo: string) {
-    return this.issues[repo];
+
+  getIssuesV2(): IGithubIssueV2[] {
+    return Object.values(this.issues)
+      .flat()
+      .map((i) => ({
+        ...i,
+        assignee: undefined,
+      }));
+  }
+
+  getIssuesByRepo(repo: string): IGithubIssue[] {
+    return this.issues[repo].map((i) => ({
+      ...i,
+      assignees: i.assignee,
+    }));
+  }
+
+  getIssuesByRepoV2(repo: string): IGithubIssueV2[] {
+    return this.issues[repo].map((i) => ({
+      ...i,
+      assignee: undefined,
+    }));
   }
 
   private async resolveInstallationId() {
@@ -267,21 +293,59 @@ export class GithubService implements OnModuleInit {
     >['data'][number],
     repo: string,
   ): FullIssue {
+    const assignees =
+      issue.assignees?.map((assignee) => ({
+        img: assignee.avatar_url,
+        username: assignee.login,
+      })) ?? [];
     return {
       id: issue.id,
       repoId: issue.number,
       title: issue.title,
-      assignees: {
-        username: issue.assignee?.login ?? '',
-        img: issue.assignee?.avatar_url ?? '',
-      },
+      assignee: assignees[0],
+      assignees,
       labels: (issue.labels as any[]).map((l) => ({
         name: l.name,
         description: l.description,
         color: l.color,
       })),
+      tasks: this.parseTasksFromIssue(issue.body ?? ''),
       body: issue.body ?? '',
       repo,
     };
+  }
+
+  private parseTasksFromIssue(issueBody: string): IGithubIssueV2['tasks'] {
+    const tasks: IGithubIssueV2['tasks'] = [];
+    const lines = issueBody.split('\n');
+    let currentCategory: string | undefined;
+
+    // Regex patterns
+    const taskPattern = /^[\s-]*\[([x\s])\]\s*(.+)$/i;
+    const headerPattern = /^#{1,6}\s+(.+)$/;
+
+    for (const line of lines) {
+      const trimmedLine = line.trim();
+
+      const headerMatch = trimmedLine.match(headerPattern);
+      if (headerMatch) {
+        currentCategory = headerMatch[1].trim();
+        continue;
+      }
+
+      const taskMatch = trimmedLine.match(taskPattern);
+      if (taskMatch) {
+        const done = taskMatch[1].toLowerCase() === 'x';
+        const name = taskMatch[2].trim();
+
+        tasks.push({
+          done,
+          name,
+          category: currentCategory,
+        });
+      }
+    }
+
+    return tasks;
   }
 }

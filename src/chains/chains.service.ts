@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { IChain, chains } from '@stabilitydao/host/out/chains';
+import { ChainStatus, IChain, chains } from '@stabilitydao/host/out/chains';
 
 import * as allChains from 'viem/chains';
 import { Chain as ViemChain } from 'viem/chains';
@@ -10,18 +9,15 @@ export class ChainsService {
   private chainsById: { [chainId: string]: IChain };
   private chainByName: { [name: string]: IChain };
 
-  private readonly DISABLED_CHAINS_ENV_KEY = 'DISABLED_CHAINS';
-  constructor(private readonly configService: ConfigService) {
-    const disabledChains = this.getDisabledChains();
-
+  constructor() {
     this.chainsById = Object.entries(chains).reduce((acc, [id, chain]) => {
-      if (!disabledChains.includes(+id)) {
+      if (chain.status != ChainStatus.NOT_SUPPORTED) {
         acc[id] = chain;
       }
       return acc;
     }, {});
-    this.chainByName = Object.entries(chains).reduce((acc, [id, chain]) => {
-      if (!disabledChains.includes(+id)) {
+    this.chainByName = Object.entries(chains).reduce((acc, [_, chain]) => {
+      if (chain.status != ChainStatus.NOT_SUPPORTED) {
         acc[chain.name] = chain;
       }
       return acc;
@@ -38,9 +34,7 @@ export class ChainsService {
     return undefined;
   }
   getChains() {
-    return Object.values(chains).filter(
-      (c) => !this.getDisabledChains().includes(+c.chainId),
-    );
+    return Object.values(this.chainsById);
   }
 
   getChainIds() {
@@ -53,13 +47,5 @@ export class ChainsService {
 
   getChainByName(name: string) {
     return this.chainByName[name];
-  }
-
-  private getDisabledChains() {
-    return (
-      this.configService
-        .get<string[]>(this.DISABLED_CHAINS_ENV_KEY)
-        ?.map(Number) ?? []
-    );
   }
 }

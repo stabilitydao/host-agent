@@ -4,6 +4,7 @@ import { DexscreenerService } from '../chain-data-provider/dexscreener.service';
 import { Analytics } from './types/analytics';
 import { analyticsAssets } from './config/analytics-config';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { ChainsService } from 'src/chains/chains.service';
 
 @Injectable()
 export class AnalyticsService implements OnModuleInit {
@@ -12,6 +13,7 @@ export class AnalyticsService implements OnModuleInit {
   constructor(
     private readonly dexScreenerService: DexscreenerService,
     private readonly defiLlamaService: DefiLlamaService,
+    private readonly chainsService: ChainsService,
   ) {}
 
   async onModuleInit() {
@@ -37,6 +39,22 @@ export class AnalyticsService implements OnModuleInit {
 
   getAnalytics(): Analytics {
     return this.analytics;
+  }
+
+  getNativePriceForChain(chainId: string): number {
+    const chain = this.chainsService.getViemChainById(chainId);
+    const symbol = chain?.nativeCurrency.symbol;
+
+    if (!symbol) {
+      return 0;
+    }
+    const prices = this.analytics.prices[symbol];
+
+    const price = this.analytics.prices[symbol];
+    if (!prices) {
+      return 0;
+    }
+    return +price.priceUsd;
   }
 
   private async updateAnalytics() {
