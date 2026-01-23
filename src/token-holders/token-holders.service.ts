@@ -68,7 +68,7 @@ export class TokenHoldersService {
     for (const chainId in dao.deployments) {
       const chainFolder = path.join(folder, chainId);
       const filename = path.join(chainFolder, 'holders.json');
-
+      if (!fs.existsSync(filename)) continue;
       const data = fs.readFileSync(filename, 'utf-8');
       const json = JSON.parse(data);
       holders[chainId] = json;
