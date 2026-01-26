@@ -1,14 +1,15 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { daoMetaData, daos, IGithubIssue } from '@stabilitydao/host/out';
+import { IGithubIssue } from '@stabilitydao/host/out';
+import { IGithubIssueV2 } from '@stabilitydao/host/out/activity/builder';
 import { IDAOData } from '@stabilitydao/host/out/host';
 import * as dotenv from 'dotenv';
 import * as fs from 'fs';
 import { App, Octokit } from 'octokit';
+import { getFullDaos } from 'src/utils/getDaos';
 import { sleep } from '../utils/sleep';
 import { FullIssue, Issues } from './types/issue';
-import { IGithubIssueV2 } from '@stabilitydao/host/out/activity/builder';
 dotenv.config();
 
 @Injectable()
@@ -25,11 +26,7 @@ export class GithubService implements OnModuleInit {
   private fullSyncIsRunning = false;
 
   constructor(private config: ConfigService) {
-    this.daos = daos;
-    for (const dao of this.daos) {
-      const metadata = daoMetaData[dao.symbol.toLowerCase()];
-      dao.daoMetaData = metadata;
-    }
+    this.daos = getFullDaos();
   }
 
   async onModuleInit() {

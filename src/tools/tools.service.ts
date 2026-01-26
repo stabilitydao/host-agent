@@ -1,8 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { daos, IDAOData } from '@stabilitydao/host';
+import { IDAOData } from '@stabilitydao/host';
+import { createCanvas, loadImage } from 'canvas';
 import * as fs from 'fs';
 import * as path from 'path';
-import { createCanvas, loadImage } from 'canvas';
+import { getFullDaos } from 'src/utils/getDaos';
 
 @Injectable()
 export class ToolsService {
@@ -13,7 +14,7 @@ export class ToolsService {
   private readonly daos: IDAOData[];
   private readonly logger = new Logger(ToolsService.name);
   constructor() {
-    this.daos = daos;
+    this.daos = getFullDaos();
     if (!fs.existsSync(this.tempDir)) {
       fs.mkdirSync(this.tempDir, { recursive: true });
     }

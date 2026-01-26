@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { daos } from '@stabilitydao/host/out';
 import { IBuildersMemory } from '@stabilitydao/host/out/activity/builder';
 import { IOSMemory } from '@stabilitydao/host/out/api';
 import { IDAOData } from '@stabilitydao/host/out/host';
+import { getFullDaos } from 'src/utils/getDaos';
 import { AnalyticsService } from '../analytics/analytics.service';
 import { GithubService } from '../github/github.service';
 import { OnChainDataService } from '../on-chain-data/on-chain-data.service';
@@ -17,7 +17,7 @@ export class MemoryService {
     private readonly revenueService: RevenueService,
     private readonly onChainDataService: OnChainDataService,
   ) {
-    this.daos = daos;
+    this.daos = getFullDaos()
   }
 
   getOSMemory(): IOSMemory {
