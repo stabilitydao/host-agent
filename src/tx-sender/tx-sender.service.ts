@@ -15,6 +15,7 @@ import {
   Transaction,
   TransactionResult,
 } from './tx-sender.types';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class TxSenderService {
@@ -22,13 +23,19 @@ export class TxSenderService {
 
   private readonly queue: TxQueue = new TxQueue();
   private isProcessing = false;
+  private isEnabled = false;
   constructor(
+    private readonly configService: ConfigService,
     private readonly rpcService: RpcService,
     private readonly monitoring: TxMonitoringService,
-  ) {}
+  ) {
+    this.isEnabled =
+      this.configService.get<boolean>('txSenderEnabled') ?? false;
+  }
 
   @Cron(CronExpression.EVERY_MINUTE)
   async handleCron() {
+    if (!this.isEnabled) return;
     await this.processQueue();
   }
   addTxToQueue(tx: Transaction) {
