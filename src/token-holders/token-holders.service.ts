@@ -18,7 +18,10 @@ interface TransferLog {
 @Injectable()
 export class TokenHoldersService {
   private readonly logger = new Logger(TokenHoldersService.name);
-  private readonly step = 200_000;
+  private readonly stepByChain = {
+    146: 200_000,
+    9745: 10_000,
+  };
 
   private readonly tempDir = './temp/token-holders';
   private readonly enabled: boolean;
@@ -150,9 +153,11 @@ export class TokenHoldersService {
       `[${daoKey}] ${chainId} ${tokenAddress} ${fromBlock} → ${latestBlock}`,
     );
 
+    const step = this.stepByChain[chainId];
     const logs = await this.fetchTransferLogs({
       rpc,
       tokenAddress,
+      step,
       from: fromBlock,
       to: Number(latestBlock),
     });
@@ -206,13 +211,14 @@ export class TokenHoldersService {
   private async fetchTransferLogs(opts: {
     rpc: string;
     tokenAddress: string;
+    step: number;
     from: number;
     to: number;
   }): Promise<TransferLog[]> {
     const logs: TransferLog[] = [];
 
-    for (let i = opts.from; i <= opts.to; i += this.step) {
-      const end = Math.min(i + this.step - 1, opts.to);
+    for (let i = opts.from; i <= opts.to; i += opts.step) {
+      const end = Math.min(i + opts.step - 1, opts.to);
 
       const cmd = [
         'cast logs',
