@@ -51,7 +51,7 @@ export class TokenHoldersService {
       Boolean(this.configService.get('tokenHoldersParsingEnabled')) ?? false;
   }
 
-  @Cron(CronExpression.EVERY_MINUTE)
+  @Cron(CronExpression.EVERY_10_MINUTES)
   async handleCron() {
     if (!this.enabled) return;
     await this.updateTokenHolders();
