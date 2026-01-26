@@ -67,6 +67,10 @@ export class RpcService {
     return this.account.address;
   }
 
+  getAccount() {
+    return this.account;
+  }
+
   private setPublicClient(chain: Chain) {
     const rpcUrl = chain.rpcUrls.default[0];
 

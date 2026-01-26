@@ -1,12 +1,11 @@
-import { SimulateContractParameters } from 'viem';
+import { Account, SimulateContractParameters } from 'viem';
 
 export type Transaction = {
   id: string;
   type: TransactionType;
   chainId: string;
-  account?: `0x${string}`;
   retries: number;
-  data: SimulateContractParameters;
+  data: SimulateContractParameters<any, any, any, any, any, Account>;
 };
 
 export type SentTransactionResult = {

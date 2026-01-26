@@ -45,6 +45,7 @@ export class RevenuePeriodUpdaterService {
           address: revenueRouterAddress,
           abi: RevenueRouterABI as Abi,
           functionName: this.updatePeriodFunctionName,
+          args: [],
         },
         id,
         retries: 3,

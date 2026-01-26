@@ -1,20 +1,20 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { RpcService } from 'src/rpc/rpc.service';
+import { v4 } from 'uuid';
 import {
   formatUnits,
   PublicClient,
   WalletClient,
   WriteContractParameters,
 } from 'viem';
+import { TxMonitoringService } from './tx-monitoring.service';
 import { TxQueue } from './tx-sender.queu';
 import {
   SentTransactionResult,
   Transaction,
   TransactionResult,
 } from './tx-sender.types';
-import { v4 } from 'uuid';
-import { TxMonitoringService } from './tx-monitoring.service';
 
 @Injectable()
 export class TxSenderService {
@@ -87,7 +87,6 @@ export class TxSenderService {
         publicClient,
         walletClient,
       ).catch((e) => {
-        this.logger.warn(`[${tx.chainId}] Failed to send tx: ${e.message}`);
         result.status = TransactionResult.SENDING_ERROR;
         result.error = e.message;
       });
@@ -181,7 +180,6 @@ export class TxSenderService {
     try {
       const sim = await client.simulateContract({
         ...tx.data,
-        account: tx.account,
       });
       this.logger.log(
         `[${tx.chainId}] Simulated tx successfully ${tx.type}-${tx.id}`,
@@ -189,6 +187,7 @@ export class TxSenderService {
 
       return sim.request as WriteContractParameters;
     } catch (e) {
+      this.logger.log(e);
       return null;
     }
   }
@@ -208,8 +207,9 @@ export class TxSenderService {
     publicClient: PublicClient,
     client: WalletClient,
   ): Promise<SentTransactionResult> {
-    this.logger.log(`[${tx.chainId}] Sending tx ${tx.type}-${tx.id}`);
-    const hash = await client.writeContract(params);
+    const hash = await client.writeContract({
+      ...params,
+    });
 
     const transaction = await publicClient.waitForTransactionReceipt({
       hash,

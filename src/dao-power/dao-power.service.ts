@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { daos, IDAOData } from '@stabilitydao/host';
 import { ContractIndices } from '@stabilitydao/host/out/host';
 import IDAO from 'abi/IDAO';
@@ -18,13 +19,14 @@ export class DaoPowerService {
     private readonly txSenderService: TxSenderService,
   ) {}
 
-  onModuleInit() {
+  @Cron(CronExpression.EVERY_HOUR)
+  async handleCron() {
     for (const dao of daos) {
-      this.getHoldersPowerForDao(dao);
+      await this.updatePowersForDao(dao);
     }
   }
 
-  private async getHoldersPowerForDao(dao: IDAOData) {
+  private async updatePowersForDao(dao: IDAOData) {
     const holders = this.tokenHoldersService.getTokenHoldersForDao(dao.symbol);
 
     const initialChain = this.chainService.getChainByName(dao.initialChain);
@@ -67,14 +69,14 @@ export class DaoPowerService {
         continue;
       }
     }
-    this.updatePowersForDao(
+    this.sendUpdateTx(
       initialDaoToken as `0x${string}`,
       initialChain.chainId + '',
       powers,
     );
   }
 
-  private updatePowersForDao(
+  private sendUpdateTx(
     tokenAddress: `0x${string}`,
     chainId: string,
     powers: Record<string, bigint>,
@@ -93,11 +95,11 @@ export class DaoPowerService {
       id: this.txSenderService.generateTxId(),
       retries: 3,
       type: TransactionType.UPDATE_OTHER_CHAINS_POWERS,
-      account: this.rpcService.getAccountAddress(),
       data: {
         abi: IDAO as Abi,
         address: tokenAddress,
         functionName: 'updateOtherChainsPowers',
+        account: this.rpcService.getAccount(),
         args,
       },
     });
