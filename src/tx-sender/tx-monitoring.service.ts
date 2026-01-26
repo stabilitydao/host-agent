@@ -266,9 +266,14 @@ export class TxMonitoringService implements OnModuleInit {
       if (!client) {
         continue;
       }
-      const balance = await client.getBalance({
-        address: accountAddress,
-      });
+      const balance = await client
+        .getBalance({
+          address: accountAddress,
+        })
+        .catch(() => 0n);
+
+      console.log(balance);
+      
 
       this.spendingReport.balance[chain.chainId] = {
         coin: formatUnits(balance, 18),
