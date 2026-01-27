@@ -25,7 +25,10 @@ export class TelegramUpdate {
   async daos(@Ctx() ctx: Context) {
     const msg = await this.telegramService.getDaosInfo();
 
-    await ctx.reply(msg, { parse_mode: this.telegramService.markdown });
+    await ctx.reply(msg, {
+      parse_mode: this.telegramService.markdown,
+      link_preview_options: { is_disabled: true },
+    });
   }
   @Command('ping')
   async ping(@Ctx() ctx: Context) {
