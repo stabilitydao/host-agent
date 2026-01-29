@@ -15,6 +15,10 @@ export class RevenuePeriodUpdaterService {
   private updatePeriodFunctionName = 'updatePeriod';
   constructor(private readonly txSenderService: TxSenderService) {}
 
+  async onModuleInit() {
+    await this.updatePeriods();
+  }
+
   @Cron(CRON_EXPRESSION, { timeZone: 'UTC' })
   async handleCron() {
     await this.updatePeriods();
