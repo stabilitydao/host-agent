@@ -94,6 +94,8 @@ export class GithubService implements OnModuleInit {
     this.logger.log(`Issue event: ${action} in ${repoKey}`);
 
     try {
+      // Wait a few seconds before fetching the issues
+      await sleep(3);
       const octokit = await this.getOctokit();
       const [owner, repo] = [repository.owner.login, repository.name];
 
