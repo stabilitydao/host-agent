@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { IDAOData, IHostAgentMemory, daos } from '@stabilitydao/host';
+import { IDAOData, IHostAgentMemory } from '@stabilitydao/host';
 import { IBuildersMemoryV2 } from '@stabilitydao/host/out/activity/builder';
 import { AnalyticsService } from 'src/analytics/analytics.service';
 import { GithubService } from 'src/github/github.service';
