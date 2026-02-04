@@ -1,15 +1,31 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { IDAOData } from '@stabilitydao/host';
 import { InjectBot } from 'nestjs-telegraf';
 import { getFullDaos } from 'src/utils/getDaos';
 import { Telegraf } from 'telegraf';
 import * as templates from './templates';
+import { Cron, CronExpression } from '@nestjs/schedule';
 
 @Injectable()
 export class TelegramService {
-  private readonly daos: IDAOData[];
-
   public readonly markdown = 'HTML';
+
+  public readonly daoUsers: {
+    [daoSymbol: string]: {
+      [tsLink: string]: number;
+    };
+  } = {};
+
+  private readonly daos: IDAOData[];
+  private readonly logger = new Logger(TelegramService.name);
+  async onModuleInit() {
+    await this.updateChatMembersCount();
+  }
+
+  @Cron(CronExpression.EVERY_2_HOURS)
+  async handleCron() {
+    await this.updateChatMembersCount();
+  }
 
   constructor(@InjectBot() private readonly bot: Telegraf) {
     this.daos = getFullDaos();
@@ -48,6 +64,28 @@ export class TelegramService {
     return templates.daoTelegramStatsTemplate(this.daos, async (username) => {
       return this.bot.telegram.getChatMembersCount(`@${username}`);
     });
+  }
+
+  async updateChatMembersCount() {
+    for (const dao of this.daos) {
+      this.updateChatMembersCountForDao(dao);
+    }
+  }
+  async updateChatMembersCountForDao(dao: IDAOData) {
+    const tgAccounts = dao.socials?.filter((s) => s.startsWith('https://t.me'));
+    for (const account of tgAccounts) {
+      if (!this.daoUsers[dao.symbol]) {
+        this.daoUsers[dao.symbol] = {};
+      }
+      const username = account.replace('https://t.me/', '');
+      const count = await this.bot.telegram
+        .getChatMembersCount(`@${username}`)
+        .catch(() => {
+          this.logger.warn(`Failed to get members for DAO ${username}`);
+        });
+      if (!count) continue;
+      this.daoUsers[dao.symbol][account] = count;
+    }
   }
 
   async sendMessage(chatId: number, text: string) {

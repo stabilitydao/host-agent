@@ -7,6 +7,8 @@ import { OnChainDataModule } from '../on-chain-data/on-chain-data.module';
 import { AnalyticsModule } from '../analytics/analytics.module';
 import { MemoryV2Service } from './memory-v2.service';
 import { TxSenderModule } from 'src/tx-sender/tx-sender.module';
+import { TelegramModule } from 'src/telegram/telegram.module';
+import { TwitterModule } from 'src/twitter/twitter.module';
 
 @Module({
   imports: [
@@ -15,6 +17,8 @@ import { TxSenderModule } from 'src/tx-sender/tx-sender.module';
     OnChainDataModule,
     AnalyticsModule,
     TxSenderModule,
+    TelegramModule,
+    TwitterModule
   ],
   providers: [MemoryService, MemoryV2Service],
   controllers: [MemoryController],

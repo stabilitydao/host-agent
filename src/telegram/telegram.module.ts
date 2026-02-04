@@ -14,5 +14,6 @@ import { TelegramUpdate } from './telegram.update';
     }),
   ],
   providers: [TelegramService, TelegramUpdate],
+  exports: [TelegramService],
 })
 export class TelegramModule {}

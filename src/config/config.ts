@@ -4,6 +4,7 @@ export const config = () => ({
   walletPrivateKey: process.env.WALLET_PRIVATE_KEY,
   telegramBotToken: process.env.TELEGRAM_BOT_TOKEN,
   txSenderEnabled: process.env.TX_SENDER_ENABLED === 'true',
+  twitterApiKey: process.env.TWITTERAPI_API_KEY,
 });
 
 export const Commands = {

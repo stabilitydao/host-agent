@@ -5,6 +5,8 @@ import { AnalyticsService } from 'src/analytics/analytics.service';
 import { GithubService } from 'src/github/github.service';
 import { OnChainDataService } from 'src/on-chain-data/on-chain-data.service';
 import { RevenueService } from 'src/revenue/revenue.service';
+import { TelegramService } from 'src/telegram/telegram.service';
+import { TwitterService } from 'src/twitter/twitter.service';
 import { TxMonitoringService } from 'src/tx-sender/tx-monitoring.service';
 import { getFullDaos } from 'src/utils/getDaos';
 import { now } from 'src/utils/now';
@@ -20,6 +22,8 @@ export class MemoryV2Service {
     private readonly revenueService: RevenueService,
     private readonly onChainDataService: OnChainDataService,
     private readonly txMonitoring: TxMonitoringService,
+    private readonly telegramService: TelegramService,
+    private readonly twitterService: TwitterService,
   ) {
     this.daos = getFullDaos();
   }
@@ -120,10 +124,15 @@ export class MemoryV2Service {
   private getDaosFullData(): IHostAgentMemory['data']['daos'] {
     const result: IHostAgentMemory['data']['daos'] = {};
     for (const dao of this.daos) {
+      const tgUsers = this.telegramService.daoUsers[dao.symbol] ?? {};
+      const twitterFollowers = this.twitterService.twitterFollowers[dao.symbol] ?? {};
       result[dao.symbol] = {
         oraclePrice: '0',
         coingeckoPrice: '0',
-        socialUsers: {},
+        socialUsers: {
+          ...tgUsers,
+          ...twitterFollowers
+        },
         revenueChart: this.revenueService.getRevenueChart(dao.symbol),
         onChainData: this.onChainDataService.getOnChainData(dao.symbol),
       };

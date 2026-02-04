@@ -17,6 +17,7 @@ import { DaoPowerModule } from './dao-power/dao-power.module';
 import { config } from './config/config';
 import { TxSenderModule } from './tx-sender/tx-sender.module';
 import { TelegramModule } from './telegram/telegram.module';
+import { TwitterModule } from './twitter/twitter.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { TelegramModule } from './telegram/telegram.module';
     TokenHoldersModule,
     DaoPowerModule,
     TelegramModule,
+    TwitterModule,
   ],
   controllers: [],
   providers: [],
