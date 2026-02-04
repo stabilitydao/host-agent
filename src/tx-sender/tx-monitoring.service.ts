@@ -173,16 +173,10 @@ export class TxMonitoringService implements OnModuleInit {
     return dateReports.get(chainId) || null;
   }
 
-  /**
-   * Get all daily reports for a specific date
-   */
   getDailyReportsByDate(date: string): Map<string, ChainReport> | null {
     return this.dailyReports.get(date) || null;
   }
 
-  /**
-   * Get all daily reports for a specific chain across all dates
-   */
   getDailyReportsByChain(chainId: string): Map<string, ChainReport> {
     const chainDailyReports = new Map<string, ChainReport>();
 
@@ -224,10 +218,10 @@ export class TxMonitoringService implements OnModuleInit {
       }
     }
 
-    // Also include current reports
     const chainIds = this.chains.getChains();
+
     for (const { chainId } of chainIds) {
-      const reports = this.getAllReports();
+      const reports = this.getAllReports().filter((r) => r.chainId == chainId);
 
       for (const { lastUpdated, totalTransactions, totalGasSpent } of reports) {
         const date = new Date(lastUpdated).toISOString().split('T')[0];
