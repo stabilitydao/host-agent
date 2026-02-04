@@ -22,6 +22,7 @@ export class TxMonitoringService implements OnModuleInit {
   private readonly dailyReportsDir = join(this.reportsDir, 'daily');
 
   private chainReports: Map<string, ChainReport> = new Map();
+  private dailyReports: Map<string, Map<string, ChainReport>> = new Map(); // date -> chainId -> report
 
   constructor(
     private readonly rpcService: RpcService,
@@ -32,6 +33,7 @@ export class TxMonitoringService implements OnModuleInit {
   async onModuleInit() {
     await this.ensureDirectories();
     await this.loadExistingReports();
+    await this.loadAllDailyReports();
     await this.initializeSpendingReport();
 
     const account = this.rpcService.getAccountAddress();
@@ -89,6 +91,12 @@ export class TxMonitoringService implements OnModuleInit {
             `Gas: ${report.totalGasSpent} ETH`,
         );
 
+        // Store in memory before resetting
+        if (!this.dailyReports.has(dateStr)) {
+          this.dailyReports.set(dateStr, new Map());
+        }
+        this.dailyReports.get(dateStr)!.set(chainId, { ...report });
+
         report.transactions = [];
         report.totalTransactions = 0;
         report.successfulTransactions = 0;
@@ -103,19 +111,132 @@ export class TxMonitoringService implements OnModuleInit {
     }
   }
 
+  /**
+   * Load all daily reports from the daily reports directory
+   * Populates the dailyReports Map with historical data
+   */
+  async loadAllDailyReports(): Promise<void> {
+    try {
+      const files = await fs.readdir(this.dailyReportsDir);
+      const dailyFiles = files.filter(
+        (f) => f.startsWith('chain-') && f.endsWith('.json'),
+      );
+
+      for (const file of dailyFiles) {
+        try {
+          // Parse filename: chain-{chainId}-{date}.json
+          const match = file.match(/^chain-(.+)-(\d{4}-\d{2}-\d{2})\.json$/);
+          if (!match) {
+            this.logger.warn(`Invalid daily report filename: ${file}`);
+            continue;
+          }
+
+          const [, chainId, dateStr] = match;
+          const content = await fs.readFile(
+            join(this.dailyReportsDir, file),
+            'utf-8',
+          );
+          const report: ChainReport = JSON.parse(content);
+
+          // Initialize date map if it doesn't exist
+          if (!this.dailyReports.has(dateStr)) {
+            this.dailyReports.set(dateStr, new Map());
+          }
+
+          // Store the report
+          this.dailyReports.get(dateStr)!.set(chainId, report);
+        } catch (error) {
+          this.logger.error(`Failed to parse daily report ${file}:`, error);
+        }
+      }
+
+      const totalDates = this.dailyReports.size;
+      const totalReports = Array.from(this.dailyReports.values()).reduce(
+        (sum, dateMap) => sum + dateMap.size,
+        0,
+      );
+
+      this.logger.log(
+        `Loaded ${totalReports} daily reports across ${totalDates} dates`,
+      );
+    } catch (error) {
+      this.logger.warn('No daily reports found or failed to load:', error);
+    }
+  }
+
+  /**
+   * Get daily report for a specific chain and date
+   */
+  getDailyReport(chainId: string, date: string): ChainReport | null {
+    const dateReports = this.dailyReports.get(date);
+    if (!dateReports) return null;
+    return dateReports.get(chainId) || null;
+  }
+
+  /**
+   * Get all daily reports for a specific date
+   */
+  getDailyReportsByDate(date: string): Map<string, ChainReport> | null {
+    return this.dailyReports.get(date) || null;
+  }
+
+  /**
+   * Get all daily reports for a specific chain across all dates
+   */
+  getDailyReportsByChain(chainId: string): Map<string, ChainReport> {
+    const chainDailyReports = new Map<string, ChainReport>();
+
+    for (const [date, dateReports] of this.dailyReports.entries()) {
+      const report = dateReports.get(chainId);
+      if (report) {
+        chainDailyReports.set(date, report);
+      }
+    }
+
+    return chainDailyReports;
+  }
+
+  getAvailableDates(): string[] {
+    return Array.from(this.dailyReports.keys()).sort();
+  }
+
   getSpentData(): NonNullable<IHostAgentMemory['txSender']>['spent'] {
     const spent = {};
+
+    for (const [date, dateReports] of this.dailyReports.entries()) {
+      if (!spent[date]) {
+        spent[date] = {
+          txs: 0,
+          usd: {},
+        };
+      }
+
+      for (const [chainId, report] of dateReports.entries()) {
+        const assetPrice =
+          this.analyticsService.getNativePriceForChain(chainId);
+
+        if (!spent[date].usd[chainId]) {
+          spent[date].usd[chainId] = 0;
+        }
+
+        spent[date].txs += report.totalTransactions;
+        spent[date].usd[chainId] += assetPrice * Number(report.totalGasSpent);
+      }
+    }
+
+    // Also include current reports
     const chainIds = this.chains.getChains();
     for (const { chainId } of chainIds) {
       const reports = this.getAllReports();
 
       for (const { lastUpdated, totalTransactions, totalGasSpent } of reports) {
         const date = new Date(lastUpdated).toISOString().split('T')[0];
-        if (!spent[date])
+        if (!spent[date]) {
           spent[date] = {
             txs: 0,
             usd: {},
           };
+        }
         const usd = spent[date].usd;
 
         const assetPrice = this.analyticsService.getNativePriceForChain(
@@ -365,7 +486,8 @@ export class TxMonitoringService implements OnModuleInit {
     try {
       const files = await fs.readdir(this.reportsDir);
       const chainFiles = files.filter(
-        (f) => f.startsWith('chain-') && f.endsWith('.json'),
+        (f) =>
+          f.startsWith('chain-') && f.endsWith('.json') && !f.includes('-2'),
       );
 
       for (const file of chainFiles) {
