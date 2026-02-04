@@ -359,7 +359,7 @@ export class TxMonitoringService implements OnModuleInit {
       },
     };
 
-    this.spendingReport.spent[now()] = newReport;
+    this.spendingReport.spent[date] = newReport;
   }
 
   private async loadExistingReports() {
