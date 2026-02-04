@@ -11,7 +11,6 @@ import { RpcService } from 'src/rpc/rpc.service';
 import { ChainsService } from 'src/chains/chains.service';
 import { IHostAgentMemory } from '@stabilitydao/host';
 import { formatUnits } from 'viem';
-import { now } from 'src/utils/now';
 import { AnalyticsService } from 'src/analytics/analytics.service';
 
 @Injectable()
