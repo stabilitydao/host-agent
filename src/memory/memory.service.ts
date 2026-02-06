@@ -1,34 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { IBuildersMemory } from '@stabilitydao/host/out/activity/builder';
-import { IOSMemory } from '@stabilitydao/host/out/api';
 import { IDAOData } from '@stabilitydao/host/out/host';
 import { getFullDaos } from 'src/utils/getDaos';
-import { AnalyticsService } from '../analytics/analytics.service';
 import { GithubService } from '../github/github.service';
-import { OnChainDataService } from '../on-chain-data/on-chain-data.service';
-import { RevenueService } from '../revenue/revenue.service';
 
 @Injectable()
 export class MemoryService {
   private daos: IDAOData[] = [];
-  constructor(
-    private readonly githubService: GithubService,
-    private readonly analyticsService: AnalyticsService,
-    private readonly revenueService: RevenueService,
-    private readonly onChainDataService: OnChainDataService,
-  ) {
-    this.daos = getFullDaos()
-  }
-
-  getOSMemory(): IOSMemory {
-    const buildersMemory = this.getBuilderMemory();
-    const analytics = this.analyticsService.getAnalytics();
-    return {
-      builders: buildersMemory,
-      daos: this.getDaosFullData(),
-      chainTvl: analytics.chainTvls,
-      prices: analytics.prices,
-    };
+  constructor(private readonly githubService: GithubService) {
+    this.daos = getFullDaos();
   }
 
   getBuilderMemory(): IBuildersMemory {
@@ -100,19 +80,6 @@ export class MemoryService {
     }
 
     return poolsMemory;
-  }
-
-  private getDaosFullData(): IOSMemory['daos'] {
-    const result: IOSMemory['daos'] = {};
-    for (const dao of this.daos) {
-      result[dao.symbol] = {
-        oraclePrice: '0',
-        coingeckoPrice: '0',
-        revenueChart: this.revenueService.getRevenueChart(dao.symbol),
-        onChainData: this.onChainDataService.getOnChainData(dao.symbol),
-      };
-    }
-    return result;
   }
 
   private extractIssueStep(title: string): string {

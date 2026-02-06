@@ -29,14 +29,15 @@ export class MemoryV2Service {
   }
 
   getHostAgentMemory(): IHostAgentMemory {
-    const analytics = this.analyticsService.getAnalytics();
+    const chainTvl = this.analyticsService.getChainTvls();
+    const prices = this.analyticsService.getPricesList();
     const buildersMemory = this.getBuilderMemoryV2();
     return {
       data: {
-        chainTvl: analytics.chainTvls,
+        chainTvl,
         builders: buildersMemory,
         daos: this.getDaosFullData(),
-        prices: analytics.prices,
+        prices,
       },
       overview: {},
       private: false,

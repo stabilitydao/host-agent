@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { RevenueChart } from '@stabilitydao/host/out/api';
 import { ContractIndices, IDAOData } from '@stabilitydao/host/out/host';
-import { Abi, PublicClient } from 'viem';
+import { Abi, erc20Abi, PublicClient } from 'viem';
 import { formatUnits } from 'viem/utils';
 import RevenueRouterABI from '../../../abi/RevenueRouterABI';
 import XSTBLAbi from '../../../abi/XSTBLABI';
@@ -9,9 +9,10 @@ import { RpcService } from '../../rpc/rpc.service';
 import { SubgraphService } from '../../subgraph/subgraph.service';
 import { now } from '../../utils/now';
 import { DaoService } from '../abstract-dao';
-import { OnChainData, RawUnitsData } from '../types/dao';
+import { OnChainData, UnitData } from '../types/dao';
 import { XStakingNotifyRewardEntity } from '../types/xStakign';
 import { isLive } from '../utils';
+import { AnalyticsService } from 'src/analytics/analytics.service';
 
 @Injectable()
 export class STBlDao extends DaoService {
@@ -22,13 +23,14 @@ export class STBlDao extends DaoService {
     dao: IDAOData,
     subgraphProvider: SubgraphService,
     rpcProvider: RpcService,
+    analyticsService: AnalyticsService,
   ) {
     if (dao.symbol != STBlDao.symbol)
       throw new Error(
         `Failed to initialize STBL DAO service. Expected ${STBlDao.symbol}, got ${dao.symbol}`,
       );
 
-    super(dao, subgraphProvider, rpcProvider);
+    super(dao, subgraphProvider, rpcProvider, analyticsService);
 
     this.isLive = isLive(this.dao);
   }
@@ -156,61 +158,103 @@ export class STBlDao extends DaoService {
 
     const staked = Number(formatUnits(totalStaked ?? 0n, 18));
 
-    const parsedPendingRevenue = this.pendingRevenue(units);
+    const totalRevenue = Object.values(units).reduce(
+      (acc, value) =>
+        acc + value.reduce((acc, value) => acc + value.pendingRevenueUSD, 0),
+      0,
+    );
 
     const timePassed = currentTimestamp - (timestamp - SECONDS_IN_WEEK);
 
-    const APR =
-      (parsedPendingRevenue / staked) * (SECONDS_IN_YEAR / timePassed) * 100;
-
-    const unitsFormatted = Object.entries(units).reduce((acc, [key, value]) => {
-      acc[key] = {
-        pendingRevenue: formatUnits(value.pendingRevenue, 18),
-      };
-      return acc;
-    }, {});
+    const APR = (totalRevenue / staked) * (SECONDS_IN_YEAR / timePassed) * 100;
 
     return {
-      staked,
+      staked: staked,
       stakingAPR: APR,
-      units: unitsFormatted,
+      units,
     };
   }
 
-  private pendingRevenue(units: RawUnitsData): number {
-    const value = Object.values(units).reduce((acc, unit) => {
-      acc += unit.pendingRevenue;
-      return acc;
-    }, 0n);
+  private async getUnitsRevenue(publicClient: PublicClient): Promise<UnitData> {
+    const chainId = publicClient.chain?.id;
+    if (!chainId) return {};
 
-    return Number(formatUnits(value, 18));
-  }
+    const xstblAddress =
+      this.dao.deployments[chainId][ContractIndices.X_TOKEN_4];
 
-  private async getUnitsRevenue(
-    publicClient: PublicClient,
-  ): Promise<RawUnitsData> {
-    const result: RawUnitsData = {};
+    if (!xstblAddress) return {};
+
+    const result: UnitData = {};
+    const xstblTokenSymbol = await publicClient.readContract({
+      abi: erc20Abi,
+      functionName: 'symbol',
+      address: xstblAddress,
+    });
+
+    const xStblDecimals = await publicClient.readContract({
+      abi: erc20Abi,
+      functionName: 'decimals',
+      address: xstblAddress,
+    });
+
+    const xstblPrice = this.analyticsService.getxStblPrice();
+
     for (const unit of this.dao.units) {
       switch (unit.unitId) {
-        case 'xstbl':
-          result[unit.unitId] = {
-            pendingRevenue: await this.getPendingRebase(publicClient),
-          };
+        case 'xstbl': {
+          const revenue = await this.getPendingRebase(publicClient);
+          result[unit.unitId] = [
+            {
+              pendingRevenueAssetAddress: xstblAddress,
+              pendingRevenueAssetAmount: Number(
+                formatUnits(revenue, xStblDecimals),
+              ),
+              pendingRevenueAssetSymbol: xstblTokenSymbol,
+              pendingRevenueUSD:
+                xstblPrice * Number(formatUnits(revenue, xStblDecimals)),
+            },
+          ];
           break;
-        case 'stability:stabilityFarm':
-          result[unit.unitId] = {
-            pendingRevenue: await this.getPendingRevenue(publicClient),
-          };
+        }
+        case 'stability:stabilityFarm': {
+          switch (chainId) {
+            case 9745:
+              result[unit.unitId] =
+                await this.getPendingAssetsRevenue(publicClient);
+              break;
+            default:
+              const revenue = await this.getPendingRevenue(publicClient);
+              result[unit.unitId] = [
+                {
+                  pendingRevenueAssetAddress: xstblAddress,
+                  pendingRevenueAssetAmount: Number(
+                    formatUnits(revenue, xStblDecimals),
+                  ),
+                  pendingRevenueAssetSymbol: xstblTokenSymbol,
+                  pendingRevenueUSD:
+                    xstblPrice * Number(formatUnits(revenue, xStblDecimals)),
+                },
+              ];
+          }
+
           break;
+        }
         case 'stability:stabilityMarket':
-          result[unit.unitId] = {
-            pendingRevenue: await this.getLendingRevenue(publicClient),
-          };
+          const revenue = await this.getLendingRevenue(publicClient);
+          result[unit.unitId] = [
+            {
+              pendingRevenueAssetAddress: xstblAddress,
+              pendingRevenueAssetAmount: Number(
+                formatUnits(revenue, xStblDecimals),
+              ),
+              pendingRevenueAssetSymbol: xstblTokenSymbol,
+              pendingRevenueUSD:
+                xstblPrice * Number(formatUnits(revenue, xStblDecimals)),
+            },
+          ];
           break;
         default:
-          result[unit.unitId] = {
-            pendingRevenue: 0n,
-          };
+          result[unit.unitId] = [];
       }
     }
 
@@ -237,9 +281,6 @@ export class STBlDao extends DaoService {
   private async getPendingRevenue(publicClient: PublicClient): Promise<bigint> {
     const chainId = publicClient.chain?.id;
 
-    if (chainId == 9745) {
-      return this.getPendingAssetsRevenue(publicClient);
-    }
     const revenueRouterAddress = chainId
       ? this.dao.deployments[chainId][ContractIndices.REVENUE_ROUTER_21]
       : undefined;
@@ -261,7 +302,7 @@ export class STBlDao extends DaoService {
       ? this.dao.deployments[chainId][ContractIndices.REVENUE_ROUTER_21]
       : undefined;
 
-    if (!revenueRouterAddress) return 0n;
+    if (!revenueRouterAddress) return [];
 
     const assets = (await publicClient
       .readContract({
@@ -271,20 +312,43 @@ export class STBlDao extends DaoService {
       })
       .catch(() => [])) as `0x${string}`[];
 
-    const pendingAssetsRevenue = await publicClient
+    const pendingAssetsRevenue = (await publicClient.multicall({
+      contracts: assets.map((asset) => ({
+        abi: RevenueRouterABI as Abi,
+        address: revenueRouterAddress,
+        functionName: 'pendingRevenueAsset',
+        args: [asset],
+      })),
+    })) as { result: bigint }[];
+
+    const symbols = (await publicClient
       .multicall({
         contracts: assets.map((asset) => ({
-          abi: RevenueRouterABI as Abi,
-          address: revenueRouterAddress,
-          functionName: 'pendingRevenueAsset',
-          args: [asset],
+          abi: erc20Abi,
+          address: asset,
+          functionName: 'symbol',
         })),
       })
-      .then((res) =>
-        res.reduce((acc, r) => acc + ((r.result ?? 0n) as bigint), 0n),
-      );
+      .then((res) => res.map((r) => r.result))) as string;
 
-    return pendingAssetsRevenue;
+    const decimals = await publicClient
+      .multicall({
+        contracts: assets.map((asset) => ({
+          abi: erc20Abi,
+          address: asset,
+          functionName: 'decimals',
+        })),
+      })
+      .then((res) => res.map((r) => Number(r.result ?? 0)));
+
+    return pendingAssetsRevenue.map((r, i) => ({
+      pendingRevenueAssetAddress: assets[i],
+      pendingRevenueAssetAmount: Number(formatUnits(r.result, decimals[i])),
+      pendingRevenueAssetSymbol: symbols[i],
+      pendingRevenueUSD:
+        this.analyticsService.getPriceBySymbol(symbols[i]) *
+        Number(formatUnits(r.result, decimals[i])),
+    }));
   }
 
   private async getXSTBLTotalSupply(

@@ -13,11 +13,6 @@ export class MemoryController {
     return this.service.getBuilderMemory();
   }
 
-  @Get('os-memory')
-  async getOSMemory() {
-    return this.service.getOSMemory();
-  }
-
   @Get('host-agent-memory')
   async getHostAgentMemory() {
     return this.serviceV2.getHostAgentMemory();

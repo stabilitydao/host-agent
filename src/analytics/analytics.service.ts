@@ -5,6 +5,7 @@ import { Analytics } from './types/analytics';
 import { analyticsAssets } from './config/analytics-config';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { ChainsService } from 'src/chains/chains.service';
+import { IHostAgentMemory } from '@stabilitydao/host';
 
 @Injectable()
 export class AnalyticsService implements OnModuleInit {
@@ -37,8 +38,25 @@ export class AnalyticsService implements OnModuleInit {
     }
   }
 
-  getAnalytics(): Analytics {
-    return this.analytics;
+  getChainTvls(): IHostAgentMemory['data']['chainTvl'] {
+    return this.analytics.chainTvls;
+  }
+
+  getPricesList(): IHostAgentMemory['data']['prices'] {
+    const allSymbols = analyticsAssets.map((asset) => asset.symbol);
+    return Object.fromEntries(
+      Object.entries(this.analytics.prices).filter(([symbol]) => {
+        return allSymbols.includes(symbol);
+      }),
+    );
+  }
+
+  getPriceBySymbol(symbol: string): number {
+    return +(this.analytics.prices[symbol].priceUsd ?? 0);
+  }
+
+  getxStblPrice(): number {
+    return this.getPriceBySymbol('STBL');
   }
 
   getNativePriceForChain(chainId: string): number {
@@ -62,12 +80,17 @@ export class AnalyticsService implements OnModuleInit {
 
     const assetPrices = await Promise.all(
       analyticsAssets.map(async (asset) => {
-        return [
-          asset.symbol,
-          await this.dexScreenerService.getPair(asset.network, asset.address),
-        ];
+        const pair = await this.dexScreenerService.getPair(
+          asset.network,
+          asset.address,
+        );
+
+        return [asset.symbol, ...asset.wrappedSymbols].map((symbol) => [
+          symbol,
+          pair,
+        ]);
       }),
-    );
+    ).then((res) => res.flat());
 
     this.analytics = {
       chainTvls: Object.fromEntries(tvlsMap),

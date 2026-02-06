@@ -1,13 +1,8 @@
-import { IOSMemory } from '@stabilitydao/host/out/api';
+import { IHostAgentMemory } from '@stabilitydao/host/out/api';
 import { DaoService } from '../abstract-dao';
 
-export type OnChainData = IOSMemory['daos'][string]['onChainData'];
+export type OnChainData =
+  IHostAgentMemory['data']['daos'][string]['onChainData'];
 
-export type RawUnitsData = Record<
-  string,
-  {
-    pendingRevenue: bigint;
-  }
->;
-
+export type UnitData = OnChainData[string]['units'];
 export type DaoList = Record<string, DaoService>;
