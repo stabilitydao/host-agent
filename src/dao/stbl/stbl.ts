@@ -238,7 +238,7 @@ export class STBlDao extends DaoService {
     const chainId = publicClient.chain?.id;
 
     if (chainId == 9745) {
-      return this.getPindingAssetsRevenue(publicClient);
+      return this.getPendingAssetsRevenue(publicClient);
     }
     const revenueRouterAddress = chainId
       ? this.dao.deployments[chainId][ContractIndices.REVENUE_ROUTER_21]
@@ -255,7 +255,7 @@ export class STBlDao extends DaoService {
       .catch(() => 0n) as Promise<bigint>;
   }
 
-  private async getPindingAssetsRevenue(publicClient: PublicClient) {
+  private async getPendingAssetsRevenue(publicClient: PublicClient) {
     const chainId = publicClient.chain?.id;
     const revenueRouterAddress = chainId
       ? this.dao.deployments[chainId][ContractIndices.REVENUE_ROUTER_21]
