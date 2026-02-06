@@ -34,5 +34,6 @@ export const analyticsAssets = [
     symbol: 'XPL',
     network: 'bsc',
     address: '0x7deef378b6befa291e2e255294e532b2c1bca419',
+    wrappedSymbols: [],
   },
 ];
