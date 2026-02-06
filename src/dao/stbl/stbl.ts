@@ -1,18 +1,17 @@
+import { Injectable } from '@nestjs/common';
+import { RevenueChart } from '@stabilitydao/host/out/api';
+import { ContractIndices, IDAOData } from '@stabilitydao/host/out/host';
+import { Abi, PublicClient } from 'viem';
+import { formatUnits } from 'viem/utils';
+import RevenueRouterABI from '../../../abi/RevenueRouterABI';
+import XSTBLAbi from '../../../abi/XSTBLABI';
+import { RpcService } from '../../rpc/rpc.service';
+import { SubgraphService } from '../../subgraph/subgraph.service';
+import { now } from '../../utils/now';
 import { DaoService } from '../abstract-dao';
 import { OnChainData, RawUnitsData } from '../types/dao';
-import { isLive } from '../utils';
-import { SubgraphService } from '../../subgraph/subgraph.service';
 import { XStakingNotifyRewardEntity } from '../types/xStakign';
-import { formatUnits } from 'viem/utils';
-import { RpcService } from '../../rpc/rpc.service';
-import { Abi, Address, PublicClient } from 'viem';
-import RevenueRouterABI from '../../../abi/RevenueRouterABI';
-import { now } from '../../utils/now';
-import XSTBLAbi from '../../../abi/XSTBLABI';
-import { Injectable } from '@nestjs/common';
-import { deployments } from '@stabilitydao/stability';
-import { IDAOData } from '@stabilitydao/host/out/host';
-import { RevenueChart } from '@stabilitydao/host/out/api';
+import { isLive } from '../utils';
 
 @Injectable()
 export class STBlDao extends DaoService {
@@ -221,7 +220,7 @@ export class STBlDao extends DaoService {
   private async getPendingRebase(publicClient): Promise<bigint> {
     const chainId = publicClient.chain?.id;
     const xStblAddress = chainId
-      ? (deployments[chainId].tokenomics.xSTBL as Address)
+      ? this.dao.deployments[chainId][ContractIndices.X_TOKEN_4]
       : undefined;
 
     if (!xStblAddress) {
@@ -238,16 +237,18 @@ export class STBlDao extends DaoService {
   private async getPendingRevenue(publicClient: PublicClient): Promise<bigint> {
     const chainId = publicClient.chain?.id;
     const revenueRouterAddress = chainId
-      ? deployments[chainId].tokenomics.revenueRouter
+      ? this.dao.deployments[chainId][ContractIndices.REVENUE_ROUTER_21]
       : undefined;
 
     if (!revenueRouterAddress) return 0n;
 
-    return publicClient.readContract({
-      abi: RevenueRouterABI as Abi,
-      address: revenueRouterAddress,
-      functionName: 'pendingRevenue',
-    }) as Promise<bigint>;
+    return publicClient
+      .readContract({
+        abi: RevenueRouterABI as Abi,
+        address: revenueRouterAddress,
+        functionName: 'pendingRevenue',
+      })
+      .catch(() => 0n) as Promise<bigint>;
   }
 
   private async getXSTBLTotalSupply(
@@ -256,35 +257,39 @@ export class STBlDao extends DaoService {
     const chainId = publicClient.chain?.id;
 
     const xStblAddress = chainId
-      ? (deployments[chainId].tokenomics.xSTBL as Address)
+      ? this.dao.deployments[chainId][ContractIndices.X_TOKEN_4]
       : undefined;
 
     if (!xStblAddress) {
       return 0n;
     }
-    return publicClient.readContract({
-      abi: XSTBLAbi as Abi,
-      address: xStblAddress,
-      functionName: 'totalSupply',
-    }) as Promise<bigint>;
+    return publicClient
+      .readContract({
+        abi: XSTBLAbi as Abi,
+        address: xStblAddress,
+        functionName: 'totalSupply',
+      })
+      .catch(() => 0n) as Promise<bigint>;
   }
 
   private async getLendingRevenue(publicClient: PublicClient): Promise<bigint> {
     const chainId = publicClient.chain?.id;
     const revenueRouterAddress = chainId
-      ? deployments[chainId].tokenomics.revenueRouter
+      ? this.dao.deployments[chainId][ContractIndices.REVENUE_ROUTER_21]
       : undefined;
 
     if (!revenueRouterAddress) {
       return 0n;
     }
 
-    return publicClient.readContract({
-      abi: RevenueRouterABI as Abi,
-      address: revenueRouterAddress,
-      functionName: 'pendingRevenue',
-      args: [0n],
-    }) as Promise<bigint>;
+    return publicClient
+      .readContract({
+        abi: RevenueRouterABI as Abi,
+        address: revenueRouterAddress,
+        functionName: 'pendingRevenue',
+        args: [0n],
+      })
+      .catch(() => 0n) as Promise<bigint>;
   }
 
   private getChains() {
