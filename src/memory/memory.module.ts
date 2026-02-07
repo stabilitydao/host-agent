@@ -9,6 +9,7 @@ import { MemoryV2Service } from './memory-v2.service';
 import { TxSenderModule } from 'src/tx-sender/tx-sender.module';
 import { TelegramModule } from 'src/telegram/telegram.module';
 import { TwitterModule } from 'src/twitter/twitter.module';
+import { TokenHoldersModule } from 'src/token-holders/token-holders.module';
 
 @Module({
   imports: [
@@ -18,7 +19,8 @@ import { TwitterModule } from 'src/twitter/twitter.module';
     AnalyticsModule,
     TxSenderModule,
     TelegramModule,
-    TwitterModule
+    TwitterModule,
+    TokenHoldersModule
   ],
   providers: [MemoryService, MemoryV2Service],
   controllers: [MemoryController],
