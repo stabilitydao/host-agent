@@ -28,7 +28,7 @@
     "@nestjs/core": "^11.0.1",
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/schedule": "^6.0.1",
-    "@stabilitydao/host": "^0.5.9",
+    "@stabilitydao/host": "^0.6.0",
     "@stabilitydao/stability": "=0.61.2",
     "axios": "^1.13.2",
     "dotenv": "^17.2.3",

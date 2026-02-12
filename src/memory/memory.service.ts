@@ -1,18 +1,106 @@
 import { Injectable } from '@nestjs/common';
-import { IBuildersMemory } from '@stabilitydao/host/out/activity/builder';
-import { IDAOData } from '@stabilitydao/host/out/host';
+import {
+  IDAOData,
+  IHostAgentMemory,
+  IHostAgentMemoryV3,
+} from '@stabilitydao/host';
+import {
+  IBuildersMemoryV2,
+  IBuildersMemoryV3,
+} from '@stabilitydao/host/out/activity/builder';
+import { AnalyticsService } from 'src/analytics/analytics.service';
+import { GithubService } from 'src/github/github.service';
+import { OnChainDataService } from 'src/on-chain-data/on-chain-data.service';
+import { RevenueService } from 'src/revenue/revenue.service';
+import { TelegramService } from 'src/telegram/telegram.service';
+import { TwitterService } from 'src/twitter/twitter.service';
+import { TxMonitoringService } from 'src/tx-sender/tx-monitoring.service';
 import { getFullDaos } from 'src/utils/getDaos';
-import { GithubService } from '../github/github.service';
+import { now } from 'src/utils/now';
+import { TokenHoldersService } from '../token-holders/token-holders.service';
 
 @Injectable()
-export class MemoryService {
+export class MemoryV2Service {
   private daos: IDAOData[] = [];
-  constructor(private readonly githubService: GithubService) {
+
+  private startTs: number;
+  constructor(
+    private readonly githubService: GithubService,
+    private readonly analyticsService: AnalyticsService,
+    private readonly revenueService: RevenueService,
+    private readonly onChainDataService: OnChainDataService,
+    private readonly txMonitoring: TxMonitoringService,
+    private readonly telegramService: TelegramService,
+    private readonly twitterService: TwitterService,
+    private readonly tokenHoldersService: TokenHoldersService,
+  ) {
     this.daos = getFullDaos();
   }
 
-  getBuilderMemory(): IBuildersMemory {
-    const poolsMemory: IBuildersMemory = {};
+  onApplicationBootstrap() {
+    this.startTs = now();
+  }
+
+  getHostAgentMemory(): IHostAgentMemory {
+    const chainTvl = this.analyticsService.getChainTvls();
+    const prices = this.analyticsService.getPricesList();
+    const buildersMemory = this.getBuilderMemoryV2();
+    return {
+      data: {
+        chainTvl,
+        builders: buildersMemory,
+        daos: this.getDaosFullData(),
+        prices,
+      },
+      overview: {},
+      private: false,
+      started: this.startTs,
+      timestamp: now(),
+      txSender: this.txMonitoring.spendingReport,
+    };
+  }
+
+  getHostAgentV3Memory(): IHostAgentMemoryV3 {
+    const chainTvl = this.analyticsService.getChainTvls();
+    const prices = this.analyticsService.getPricesList();
+    const buildersMemory = this.getBuilderMemoryV3();
+    return {
+      data: {
+        chainTvl,
+        builders: buildersMemory,
+        daos: this.getDaosFullData(),
+        prices,
+      },
+      overview: {},
+      private: false,
+      started: this.startTs,
+      timestamp: now(),
+      txSender: this.txMonitoring.spendingReport,
+    };
+  }
+
+  private getBuilderMemoryV3(): IBuildersMemoryV3 {
+    const poolsMemory: IBuildersMemoryV3 = {};
+
+    for (const dao of this.daos) {
+      poolsMemory[dao.symbol] = {
+        openIssues: {},
+        repos: {},
+      };
+      const repos = this.githubService.getRepos()[dao.symbol] ?? {};
+      for (const repo of Object.keys(repos)) {
+        poolsMemory[dao.symbol].openIssues[repo] =
+          this.githubService.getIssuesByRepoV2(repo);
+      }
+
+      poolsMemory[dao.symbol].repos = repos;
+    }
+
+    return poolsMemory;
+  }
+
+  private getBuilderMemoryV2(): IBuildersMemoryV2 {
+    const poolsMemory: IBuildersMemoryV2 = {};
 
     for (const dao of this.daos) {
       poolsMemory[dao.symbol] = {
@@ -24,16 +112,18 @@ export class MemoryService {
 
       const repos = this.githubService.getRepos();
 
-      for (const repo of repos) {
-        const issues = this.githubService.getIssuesByRepo(repo);
+      const repoKeys = Object.keys(repos);
 
-        poolsMemory[dao.symbol].openIssues.total[repo] = issues.length;
+      for (const repo of repoKeys) {
+        const issues = this.githubService.getIssuesByRepoV2(repo);
+
+        poolsMemory[dao.symbol].openIssues.total[repo] = issues?.length;
       }
 
       for (const pool of agent?.pools ?? []) {
         poolsMemory[dao.symbol].openIssues.pools[pool.name] = [];
 
-        const issues = this.githubService.getIssues();
+        const issues = this.githubService.getIssuesV2();
 
         const filtered = issues.filter((issue) =>
           issue.labels.some((l) => l.name === pool.label.name),
@@ -80,6 +170,30 @@ export class MemoryService {
     }
 
     return poolsMemory;
+  }
+
+  private getDaosFullData(): IHostAgentMemory['data']['daos'] {
+    const result: IHostAgentMemory['data']['daos'] = {};
+    for (const dao of this.daos) {
+      const tgUsers = this.telegramService.daoUsers[dao.symbol] ?? {};
+      const twitterFollowers =
+        this.twitterService.twitterFollowers[dao.symbol] ?? {};
+      const holders = this.tokenHoldersService.getDaoTokenHolder(dao.symbol);
+      result[dao.symbol] = {
+        oraclePrice: '0',
+        coingeckoPrice: '0',
+        holders,
+        socialUsers: {
+          ...tgUsers,
+          ...twitterFollowers,
+        },
+        revenueChart: this.revenueService.getRevenueChart(dao.symbol),
+        // @ts-ignore
+        revenueChartV2: this.revenueService.getRevenueChartV2(dao.symbol),
+        onChainData: this.onChainDataService.getOnChainData(dao.symbol),
+      };
+    }
+    return result;
   }
 
   private extractIssueStep(title: string): string {

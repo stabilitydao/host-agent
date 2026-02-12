@@ -87,13 +87,14 @@ export class TokenHoldersService {
       (acc, holders) => {
         for (const holder of holders) {
           if (acc[holder.address]) {
-            acc[holder.address].balance =
-              acc[holder.address].balance + holder.balance;
+            acc[holder.address].balance = (
+              Number(acc[holder.address].balance) + Number(holder.balance)
+            ).toString();
             continue;
           }
           acc[holder.address] = {
             address: holder.address as `0x${string}`,
-            balance: holder.balance,
+            balance: Number(holder.balance).toString(),
           };
         }
         return acc;
@@ -102,11 +103,11 @@ export class TokenHoldersService {
     );
 
     const total = Object.values(holders).reduce<number>((acc, holder) => {
-      return acc + +holder.balance;
+      return acc + Number(holder.balance);
     }, 0);
 
     for (const holder of Object.values(holders)) {
-      holder.percentage = ((+holder.balance / total) * 100).toFixed(2);
+      holder.percentage = ((Number(holder.balance) / total) * 100).toFixed(2);
     }
 
     return holders;
@@ -225,10 +226,10 @@ export class TokenHoldersService {
     const total = result.reduce((s, h) => s + Number(h.balance), 0);
 
     result.forEach((h) => {
-      h['percentage'] = ((+h.balance / total) * 100).toFixed(2);
+      h['percentage'] = ((Number(h.balance) / total) * 100).toFixed(2);
     });
 
-    result.sort((a, b) => +b.balance - +a.balance);
+    result.sort((a, b) => Number(b.balance) - Number(a.balance));
 
     fs.writeFileSync(holdersFile, JSON.stringify(result, null, 2));
     fs.writeFileSync(

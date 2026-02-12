@@ -1,11 +1,10 @@
 import { Module } from '@nestjs/common';
-import { MemoryService } from './memory.service';
+import { MemoryV2Service } from './memory.service';
 import { MemoryController } from './memory.controller';
 import { RevenueModule } from '../revenue/revenue.module';
 import { GithubModule } from '../github/github.module';
 import { OnChainDataModule } from '../on-chain-data/on-chain-data.module';
 import { AnalyticsModule } from '../analytics/analytics.module';
-import { MemoryV2Service } from './memory-v2.service';
 import { TxSenderModule } from 'src/tx-sender/tx-sender.module';
 import { TelegramModule } from 'src/telegram/telegram.module';
 import { TwitterModule } from 'src/twitter/twitter.module';
@@ -20,9 +19,9 @@ import { TokenHoldersModule } from 'src/token-holders/token-holders.module';
     TxSenderModule,
     TelegramModule,
     TwitterModule,
-    TokenHoldersModule
+    TokenHoldersModule,
   ],
-  providers: [MemoryService, MemoryV2Service],
+  providers: [MemoryV2Service],
   controllers: [MemoryController],
 })
 export class MemoryModule {}

@@ -379,8 +379,7 @@ export class STBlDao extends DaoService {
         abi: RevenueRouterABI as Abi,
         address: revenueRouterAddress,
         functionName: 'pendingRevenue',
-      })
-      .catch(() => 0n) as Promise<bigint>;
+      }) as Promise<bigint>;
   }
 
   private async getPendingAssetsRevenue(publicClient: PublicClient) {
@@ -396,8 +395,7 @@ export class STBlDao extends DaoService {
         abi: RevenueRouterABI as Abi,
         address: revenueRouterAddress,
         functionName: 'pendingRevenueAssets',
-      })
-      .catch(() => [])) as `0x${string}`[];
+      }) as `0x${string}`[])
 
     const pendingAssetsRevenue = (await publicClient.multicall({
       contracts: assets.map((asset) => ({
@@ -455,8 +453,7 @@ export class STBlDao extends DaoService {
         abi: XSTBLAbi as Abi,
         address: xStblAddress,
         functionName: 'totalSupply',
-      })
-      .catch(() => 0n) as Promise<bigint>;
+      }) as Promise<bigint>;
   }
 
   private async getRevenueTokens(chainId: string): Promise<`0x${string}`[]> {
@@ -530,8 +527,7 @@ export class STBlDao extends DaoService {
         address: revenueRouterAddress,
         functionName: 'pendingRevenue',
         args: [0n],
-      })
-      .catch(() => 0n) as Promise<bigint>;
+      }).catch(() => 0n) as Promise<bigint>;
   }
 
   private getChains() {

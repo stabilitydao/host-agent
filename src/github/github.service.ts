@@ -8,12 +8,13 @@ import * as fs from 'fs';
 import { App, Octokit } from 'octokit';
 import { getFullDaos } from 'src/utils/getDaos';
 import { sleep } from '../utils/sleep';
-import { FullIssue, Issues } from './types/issue';
+import { FullIssue, Issues, Repos } from './types/issue';
 dotenv.config();
 
 @Injectable()
 export class GithubService implements OnModuleInit {
   public issues: Issues = {};
+  public repos: Repos = {};
 
   private app: App;
   private message: string;
@@ -49,7 +50,7 @@ export class GithubService implements OnModuleInit {
     this.message = 'Good luck!';
 
     await this.resolveInstallationId();
-    await this.updateIssues().catch((e) => this.logger.error(e));
+    await this.updateBuilderData().catch((e) => this.logger.error(e));
 
     const { data } = await this.app.octokit.request('/app');
     this.logger.log(
@@ -111,73 +112,73 @@ export class GithubService implements OnModuleInit {
     }
   }
 
-  async syncLabels() {
-    for (const dao of this.daos) {
-      const builder = dao.daoMetaData?.builderActivity;
-      if (!builder) {
-        this.logger.error('Builder agent not found');
-        continue;
-      }
+  // async syncLabels() {
+  //   for (const dao of this.daos) {
+  //     const builder = dao.daoMetaData?.builderActivity;
+  //     if (!builder) {
+  //       this.logger.error('Builder agent not found');
+  //       continue;
+  //     }
 
-      const labels = [
-        ...builder.pools.map((p) => p.label),
-        ...builder.conveyors.map((c) => c.label),
-      ];
+  //     const labels = [
+  //       ...builder.pools.map((p) => p.label),
+  //       ...builder.conveyors.map((c) => c.label),
+  //     ];
 
-      const uniqueLabels = Object.values(
-        Object.fromEntries(labels.map((l) => [l.name, l])),
-      );
+  //     const uniqueLabels = Object.values(
+  //       Object.fromEntries(labels.map((l) => [l.name, l])),
+  //     );
 
-      const octokit = await this.getOctokit();
+  //     const octokit = await this.getOctokit();
 
-      for (const repo of builder.repo) {
-        const [owner, repoName] = repo.split('/');
-        this.logger.log(`🔄 Syncing labels for ${repo}...`);
+  //     for (const repo of builder.repo) {
+  //       const [owner, repoName] = repo.split('/');
+  //       this.logger.log(`🔄 Syncing labels for ${repo}...`);
 
-        const { data: existing } = await octokit.rest.issues.listLabelsForRepo({
-          owner,
-          repo: repoName,
-          per_page: 100,
-        });
+  //       const { data: existing } = await octokit.rest.issues.listLabelsForRepo({
+  //         owner,
+  //         repo: repoName,
+  //         per_page: 100,
+  //       });
 
-        for (const label of uniqueLabels) {
-          const existingLabel = existing.find((l) => l.name === label.name);
-          const color = label.color.replace('#', '');
+  //       for (const label of uniqueLabels) {
+  //         const existingLabel = existing.find((l) => l.name === label.name);
+  //         const color = label.color.replace('#', '');
 
-          this.logger.log(`🔍 Checking ${label.name}`);
+  //         this.logger.log(`🔍 Checking ${label.name}`);
 
-          if (!existingLabel) {
-            this.logger.log(`➕ Creating ${label.name}`);
-            await octokit.rest.issues.createLabel({
-              owner,
-              repo: repoName,
-              name: label.name,
-              color,
-              description: label.description,
-            });
-          } else if (
-            existingLabel.color !== color ||
-            existingLabel.description !== label.description
-          ) {
-            this.logger.log(`✏️ Updating ${label.name}`);
-            await octokit.rest.issues.updateLabel({
-              owner,
-              repo: repoName,
-              name: label.name,
-              color,
-              description: label.description,
-            });
-          } else {
-            this.logger.log(`✅ ${label.name} is up to date`);
-          }
-        }
-      }
-      this.logger.log('✅ All labels synced successfully!');
-    }
-  }
+  //         if (!existingLabel) {
+  //           this.logger.log(`➕ Creating ${label.name}`);
+  //           await octokit.rest.issues.createLabel({
+  //             owner,
+  //             repo: repoName,
+  //             name: label.name,
+  //             color,
+  //             description: label.description,
+  //           });
+  //         } else if (
+  //           existingLabel.color !== color ||
+  //           existingLabel.description !== label.description
+  //         ) {
+  //           this.logger.log(`✏️ Updating ${label.name}`);
+  //           await octokit.rest.issues.updateLabel({
+  //             owner,
+  //             repo: repoName,
+  //             name: label.name,
+  //             color,
+  //             description: label.description,
+  //           });
+  //         } else {
+  //           this.logger.log(`✅ ${label.name} is up to date`);
+  //         }
+  //       }
+  //     }
+  //     this.logger.log('✅ All labels synced successfully!');
+  //   }
+  // }
 
   getRepos() {
-    return Object.keys(this.issues);
+    return this.repos;
   }
 
   getIssues() {
@@ -206,7 +207,7 @@ export class GithubService implements OnModuleInit {
   }
 
   getIssuesByRepoV2(repo: string): IGithubIssueV2[] {
-    return this.issues[repo].map((i) => ({
+    return this.issues[repo]?.map((i) => ({
       ...i,
       assignee: undefined,
     }));
@@ -249,7 +250,7 @@ export class GithubService implements OnModuleInit {
     this.fullSyncIsRunning = true;
 
     try {
-      await this.updateIssues();
+      await this.updateBuilderData();
       this.logger.log('Full issues update completed.');
     } catch (error) {
       this.logger.error(`Full issues update failed: ${error}`);
@@ -258,13 +259,16 @@ export class GithubService implements OnModuleInit {
     }
   }
 
-  private async updateIssues() {
+  private async updateBuilderData() {
     for (const dao of this.daos) {
-      const builder = dao?.daoMetaData?.builderActivity;
-      if (!builder) continue;
+      const repos = dao?.unitsMetaData
+        ?.flatMap((u) => u.pool?.repos)
+        .filter((r): r is string => !!r);
+      if (!repos.length) continue;
 
-      const repos = builder.repo ?? [];
       const octokit = await this.getOctokit();
+
+      this.repos[dao.symbol] = {};
 
       for (const repo of repos) {
         const [owner, repoName] = repo.split('/');
@@ -281,6 +285,33 @@ export class GithubService implements OnModuleInit {
         } catch (e) {
           this.logger.error(`Failed to fetch issues for ${repo}`);
         }
+      }
+
+      for (const repo of repos) {
+        const [owner, repoName] = repo.split('/');
+        this.logger.log(`Fetching repo ${repo}...`);
+
+        const { data: repoData } = await octokit.rest.repos.get({
+          owner,
+          repo: repoName,
+        });
+
+        const { data: collaborators } =
+          await octokit.rest.repos.listCollaborators({
+            owner,
+            repo: repoName,
+            per_page: 100,
+          });
+
+        this.repos[dao.symbol][repo] = {
+          openIssues: this.issues[repo].length,
+          private: repoData.private,
+          access: collaborators.map((c) => ({
+            username: c.login,
+            img: c.avatar_url,
+          })),
+          stars: repoData.stargazers_count,
+        };
       }
     }
   }
@@ -319,7 +350,7 @@ export class GithubService implements OnModuleInit {
     let currentCategory: string | undefined;
 
     const taskPattern = /^[\s*-]*\[([x\s])\]\s*(.+)$/i;
-    const categoryPattern = /^\*\s+([^[\n]+)$/; // Matches "* CategoryName" (without checkboxes)
+    const categoryPattern = /^\*\s+([^[\n]+)$/;
 
     for (const line of lines) {
       const trimmedLine = line.trim();
@@ -328,7 +359,6 @@ export class GithubService implements OnModuleInit {
         continue;
       }
 
-      // Check if this is a category line (starts with * but has no checkbox)
       const categoryMatch = trimmedLine.match(categoryPattern);
       if (categoryMatch && !trimmedLine.includes('[')) {
         currentCategory = categoryMatch[1].trim();

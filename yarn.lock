@@ -1413,10 +1413,10 @@
   resolved "https://registry.yarnpkg.com/@stabilitydao/host/-/host-0.5.10.tgz#70ebc447901bf542ab4cebeb8a00ad4627d4dcf8"
   integrity sha512-GE+t7k6g9t8JfnaQYj12qpadzUEmEQfAY0UNDbeWMwKGc0sXzL9OZRx8uxAT7Rb3wQKqTQP/0mDSVOT87/b4Pg==
 
-"@stabilitydao/host@^0.5.9":
-  version "0.5.9"
-  resolved "https://registry.yarnpkg.com/@stabilitydao/host/-/host-0.5.9.tgz#761fe6b7f65d440076723275b1355da3fa0b13cc"
-  integrity sha512-NsJ014jxVkwop07AcIpkvD8Z7ZUtA3rRbtCSsMXHBwFBT8RAANiYE4c+PM1pQYLtZAoayrL2Ghb8PMjbHwyl8Q==
+"@stabilitydao/host@^0.6.0":
+  version "0.6.0"
+  resolved "https://registry.yarnpkg.com/@stabilitydao/host/-/host-0.6.0.tgz#c18a4b4bb55e13d679198daf45d33de2f8ea0594"
+  integrity sha512-WhxCaI1bOXxQnhJuYO4wmTFxcDhuebJ5f/Sr9jUqLHqpbooyLYXMGJohrWZqQ64LjJNSdaQLYcux84i6yA/ACg==
 
 "@stabilitydao/stability@=0.61.2":
   version "0.61.2"
