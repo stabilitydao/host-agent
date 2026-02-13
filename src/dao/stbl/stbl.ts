@@ -523,11 +523,9 @@ export class STBlDao extends DaoService {
         abi: RevenueRouterABI as Abi,
         address: revenueRouterAddress,
         functionName: 'pendingRevenue',
+        args: [0n],
       })
-      .catch((e) => {
-        console.log(e);
-        return 0n;
-      }) as Promise<bigint>;
+      .catch(() => 0n) as Promise<bigint>;
   }
 
   private getChains() {
