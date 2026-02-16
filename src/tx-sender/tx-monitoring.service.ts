@@ -9,13 +9,13 @@ import {
 } from './tx-sender.types';
 import { RpcService } from 'src/rpc/rpc.service';
 import { ChainsService } from 'src/chains/chains.service';
-import { IHostAgentMemory } from '@stabilitydao/host';
+import { IHostAgentMemoryV3 } from '@stabilitydao/host';
 import { formatUnits } from 'viem';
 import { AnalyticsService } from 'src/analytics/analytics.service';
 
 @Injectable()
 export class TxMonitoringService implements OnModuleInit {
-  spendingReport?: IHostAgentMemory['txSender'];
+  spendingReport?: IHostAgentMemoryV3['txSender'];
 
   private readonly logger = new Logger(TxMonitoringService.name);
   private readonly reportsDir = join(process.cwd(), 'temp/tx-reports');
@@ -194,7 +194,7 @@ export class TxMonitoringService implements OnModuleInit {
     return Array.from(this.dailyReports.keys()).sort();
   }
 
-  getSpentData(): NonNullable<IHostAgentMemory['txSender']>['spent'] {
+  getSpentData(): NonNullable<IHostAgentMemoryV3['txSender']>['spent'] {
     const spent = {};
 
     for (const [date, dateReports] of this.dailyReports.entries()) {
@@ -409,7 +409,7 @@ export class TxMonitoringService implements OnModuleInit {
 
   private async getBalances(
     accountAddress: `0x${string}`,
-  ): Promise<NonNullable<IHostAgentMemory['txSender']>['balance']> {
+  ): Promise<NonNullable<IHostAgentMemoryV3['txSender']>['balance']> {
     const chains = this.chains.getChains();
     const balance = {};
     for (const chain of chains) {

@@ -5,7 +5,7 @@ import { Analytics } from './types/analytics';
 import { analyticsAssets } from './config/analytics-config';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { ChainsService } from 'src/chains/chains.service';
-import { IHostAgentMemory } from '@stabilitydao/host';
+import { IHostAgentMemoryV3 } from '@stabilitydao/host';
 
 @Injectable()
 export class AnalyticsService implements OnModuleInit {
@@ -38,11 +38,11 @@ export class AnalyticsService implements OnModuleInit {
     }
   }
 
-  getChainTvls(): IHostAgentMemory['data']['chainTvl'] {
+  getChainTvls(): IHostAgentMemoryV3['data']['chainTvl'] {
     return this.analytics.chainTvls;
   }
 
-  getPricesList(): IHostAgentMemory['data']['prices'] {
+  getPricesList(): IHostAgentMemoryV3['data']['prices'] {
     const allSymbols = analyticsAssets.map((asset) => asset.symbol);
     return Object.fromEntries(
       Object.entries(this.analytics.prices).filter(([symbol]) => {
