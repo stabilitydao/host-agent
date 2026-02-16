@@ -24,7 +24,7 @@ export class TwitterService {
   }
 
   async onModuleInit() {
-    await this.updateTwitterFollowersForDaos();
+    // await this.updateTwitterFollowersForDaos();
   }
 
   @Cron(CronExpression.EVERY_8_HOURS)
