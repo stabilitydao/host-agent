@@ -1,7 +1,6 @@
-import {
-  IBuildersMemoryV3,
-  IGithubIssueV2,
-} from '@stabilitydao/host/out/activity/builder';
+import { IGithubIssueV2 } from "@stabilitydao/host";
+import { IBuildersMemoryV3 } from "@stabilitydao/host/out/api";
+
 
 export type Issues = { [repository: string]: FullIssue[] };
 

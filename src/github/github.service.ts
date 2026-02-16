@@ -9,7 +9,7 @@ import { App, Octokit } from 'octokit';
 import { getFullDaos } from 'src/utils/getDaos';
 import { sleep } from '../utils/sleep';
 import { FullIssue, Issues, Repos } from './types/issue';
-import { IBuildersMemoryV3 } from '@stabilitydao/host/out/activity/builder';
+import { IBuildersMemoryV3 } from '@stabilitydao/host/out/api';
 dotenv.config();
 
 @Injectable()
@@ -108,70 +108,63 @@ export class GithubService implements OnModuleInit {
     }
   }
 
-  // async syncLabels() {
-  //   for (const dao of this.daos) {
-  //     const builder = dao.daoMetaData?.builderActivity;
-  //     if (!builder) {
-  //       this.logger.error('Builder agent not found');
-  //       continue;
-  //     }
+  async syncLabels() {
+    for (const dao of this.daos) {
+      const labels = dao.unitEmitData
+        .flatMap((u) => u.pool?.label)
+        .filter((l) => !!l);
 
-  //     const labels = [
-  //       ...builder.pools.map((p) => p.label),
-  //       ...builder.conveyors.map((c) => c.label),
-  //     ];
+      const octokit = await this.getOctokit();
 
-  //     const uniqueLabels = Object.values(
-  //       Object.fromEntries(labels.map((l) => [l.name, l])),
-  //     );
+      const repos = dao.unitEmitData
+        .flatMap((u) => u.pool?.repos)
+        .filter((r): r is string => !!r);
 
-  //     const octokit = await this.getOctokit();
+      for (const repo of repos) {
+        const [owner, repoName] = repo.split('/');
+        this.logger.log(`🔄 Syncing labels for ${repo}...`);
 
-  //     for (const repo of builder.repo) {
-  //       const [owner, repoName] = repo.split('/');
-  //       this.logger.log(`🔄 Syncing labels for ${repo}...`);
+        const { data: existing } = await octokit.rest.issues.listLabelsForRepo({
+          owner,
+          repo: repoName,
+          per_page: 100,
+        });
 
-  //       const { data: existing } = await octokit.rest.issues.listLabelsForRepo({
-  //         owner,
-  //         repo: repoName,
-  //         per_page: 100,
-  //       });
+        for (const label of labels) {
+          const existingLabel = existing.find((l) => l.name === label.name);
+          const color = label.color.replace('#', '');
 
-  //       for (const label of uniqueLabels) {
-  //         const existingLabel = existing.find((l) => l.name === label.name);
-  //         const color = label.color.replace('#', '');
+          this.logger.log(`🔍 Checking ${label.name}`);
 
-  //         this.logger.log(`🔍 Checking ${label.name}`);
-
-  //         if (!existingLabel) {
-  //           this.logger.log(`➕ Creating ${label.name}`);
-  //           await octokit.rest.issues.createLabel({
-  //             owner,
-  //             repo: repoName,
-  //             name: label.name,
-  //             color,
-  //             description: label.description,
-  //           });
-  //         } else if (
-  //           existingLabel.color !== color ||
-  //           existingLabel.description !== label.description
-  //         ) {
-  //           this.logger.log(`✏️ Updating ${label.name}`);
-  //           await octokit.rest.issues.updateLabel({
-  //             owner,
-  //             repo: repoName,
-  //             name: label.name,
-  //             color,
-  //             description: label.description,
-  //           });
-  //         } else {
-  //           this.logger.log(`✅ ${label.name} is up to date`);
-  //         }
-  //       }
-  //     }
-  //     this.logger.log('✅ All labels synced successfully!');
-  //   }
-  // }
+          if (!existingLabel) {
+            this.logger.log(`➕ Creating ${label.name}`);
+            await octokit.rest.issues.createLabel({
+              owner,
+              repo: repoName,
+              name: label.name,
+              color,
+              description: label.description,
+            });
+          } else if (
+            existingLabel.color !== color ||
+            existingLabel.description !== label.description
+          ) {
+            this.logger.log(`✏️ Updating ${label.name}`);
+            await octokit.rest.issues.updateLabel({
+              owner,
+              repo: repoName,
+              name: label.name,
+              color,
+              description: label.description,
+            });
+          } else {
+            this.logger.log(`✅ ${label.name} is up to date`);
+          }
+        }
+      }
+      this.logger.log('✅ All labels synced successfully!');
+    }
+  }
 
   getRepos() {
     return this.repos;
@@ -257,7 +250,7 @@ export class GithubService implements OnModuleInit {
 
   private async updateBuilderData() {
     for (const dao of this.daos) {
-      const repos = dao?.unitsMetaData
+      const repos = dao?.unitEmitData
         ?.flatMap((u) => u.pool?.repos)
         .filter((r): r is string => !!r);
       if (!repos.length) continue;
@@ -322,7 +315,7 @@ export class GithubService implements OnModuleInit {
       const octokit = await this.getOctokit();
       const units = dao.units;
       for (const unit of units) {
-        const metadata = dao.unitsMetaData?.[units.indexOf(unit)];
+        const metadata = dao.unitEmitData?.[units.indexOf(unit)];
         builderData[dao.symbol].openIssues[unit.unitId] = [];
 
         const repos = metadata?.pool?.repos ?? [];

@@ -1,5 +1,5 @@
 import { IDAOData } from '@stabilitydao/host';
-import { activities, Activity } from '@stabilitydao/host/out/activity';
+import { activities } from '@stabilitydao/host/out/activity';
 
 // ───────────── PHASE EMOJIS ─────────────
 export const phaseEmoji: Record<string, string> = {
@@ -37,7 +37,7 @@ export function singleDaoInfoTemplate(dao: IDAOData): string {
     lines.push('<b>Units</b>');
     for (let i = 0; i < dao.units.length; i++) {
       const unit = dao.units[i];
-      const meta = dao.unitsMetaData?.[i];
+      const meta = dao.metaData?.[i];
       const emoji = meta?.emoji ? `${meta.emoji} ` : '';
       const status = meta?.status ?? 'UNKNOWN';
       const revenueShare = meta?.revenueShare ?? 0;
@@ -63,29 +63,16 @@ export function singleDaoInfoTemplate(dao: IDAOData): string {
     }
   }
 
-  // Builder
-  if (dao.activity?.includes(Activity.BUILDER)) {
-    const builder = dao.daoMetaData?.builderActivity;
-    if (builder) {
-      lines.push('<b>BUILDER</b>');
-      if (builder.repo?.length) {
-        lines.push('  <b>Repos</b>:');
-        for (const repo of builder.repo) lines.push(`   • ${repo}`);
-      }
-      if (builder.workers?.length > 0)
-        lines.push(`  <b>Workers</b>: <b>${builder.workers.length}</b>`);
-      if (builder.pools?.length)
-        lines.push(
-          `  <b>Pools</b>: ${builder.pools.map((p) => p.name).join(', ')}`,
-        );
-      if (builder.conveyors?.length)
-        lines.push(
-          `  <b>Conveyors</b>: ${builder.conveyors.map((c) => c.name).join(', ')}`,
-        );
-
-      lines.push('');
-    }
+  const repos = dao.unitEmitData
+    .flatMap((u) => u.pool?.repos)
+    .filter((r): r is string => !!r);
+  lines.push('<b>BUILDER</b>');
+  if (repos.length) {
+    lines.push('  <b>Repos</b>:');
+    for (const repo of repos) lines.push(`   • ${repo}`);
   }
+
+  lines.push('');
 
   // Funding
   if (dao.funding?.length) {
@@ -127,7 +114,7 @@ export function daoInfoTemplate(daos: IDAOData[]): string {
     if (dao.units?.length) lines.push('<b>Units</b>');
     for (let i = 0; i < (dao.units?.length ?? 0); i++) {
       const unit = dao.units[i];
-      const meta = dao.unitsMetaData?.[i];
+      const meta = dao.unitEmitData?.[i];
       const emoji = meta?.emoji ? `${meta.emoji} ` : '';
       const status = meta?.status ?? 'UNKNOWN';
       const revenueShare = meta?.revenueShare ?? 0;
@@ -152,28 +139,13 @@ export function daoInfoTemplate(daos: IDAOData[]): string {
       lines.push('');
     }
 
-    // Builder
-    if (dao.activity?.includes(Activity.BUILDER)) {
-      const builder = dao.daoMetaData?.builderActivity;
-      if (builder) {
-        lines.push('<b>BUILDER</b>');
-        if (builder.repo?.length) {
-          lines.push('  <b>Repos</b>:');
-          for (const repo of builder.repo) lines.push(`   • ${repo}`);
-        }
-        if (builder.workers.length > 0)
-          lines.push(` <b>Workers</b>: <b>${builder.workers.length}</b>`);
-        if (builder.pools?.length)
-          lines.push(
-            ` <b>Pools</b> Pools: ${builder.pools.map((p) => p.name).join(', ')}`,
-          );
-        if (builder.conveyors?.length)
-          lines.push(
-            ` <b>Conveyors</b>: ${builder.conveyors.map((c) => c.name).join(', ')}`,
-          );
-
-        lines.push('');
-      }
+    const repos = dao.unitEmitData
+      .flatMap((u) => u.pool?.repos)
+      .filter((r): r is string => !!r);
+    lines.push('<b>BUILDER</b>');
+    if (repos.length) {
+      lines.push('  <b>Repos</b>:');
+      for (const repo of repos) lines.push(`   • ${repo}`);
     }
 
     // Funding
