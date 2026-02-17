@@ -279,7 +279,9 @@ export class GithubService implements OnModuleInit {
           });
 
           this.issues[repo] = issues.map((i) => this.issueToDTO(i, repo));
-        } catch {
+        } catch (e) {
+          console.log(e);
+
           this.logger.error(`Failed to fetch issues for ${repo}`);
         }
       }
@@ -366,7 +368,9 @@ export class GithubService implements OnModuleInit {
               })),
               stars: repoData.stargazers_count,
             };
-          } catch {
+          } catch (e) {
+            console.log(e);
+
             this.logger.error(`Failed to fetch issues for ${repo}`);
           }
         }
